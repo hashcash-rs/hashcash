@@ -24,7 +24,7 @@ use futures_timer::Delay;
 use log::*;
 use parking_lot::Mutex;
 use sc_client_api::ImportNotifications;
-use sc_consensus::{BlockImportParams, BoxBlockImport, StateAction, StorageChanges};
+use sc_consensus::{BlockImport, BlockImportParams, StateAction, StorageChanges};
 use sp_consensus::{BlockOrigin, Proposal};
 use sp_runtime::{
 	generic::BlockId,
@@ -73,30 +73,28 @@ pub struct MiningHandle<
 	Algorithm: PowAlgorithm<Block>,
 	L: sc_consensus::JustificationSyncLink<Block>,
 	Proof,
+	I: BlockImport<Block>,
 > {
 	version: Arc<AtomicUsize>,
 	algorithm: Arc<Algorithm>,
 	justification_sync_link: Arc<L>,
 	build: Arc<Mutex<Option<MiningBuild<Block, Algorithm, Proof>>>>,
-	block_import: Arc<Mutex<BoxBlockImport<Block>>>,
+	block_import: Arc<Mutex<I>>,
 }
 
-impl<Block, Algorithm, L, Proof> MiningHandle<Block, Algorithm, L, Proof>
+impl<Block, Algorithm, L, Proof, I> MiningHandle<Block, Algorithm, L, Proof, I>
 where
 	Block: BlockT,
 	Algorithm: PowAlgorithm<Block>,
 	Algorithm::Difficulty: 'static + Send,
 	L: sc_consensus::JustificationSyncLink<Block>,
+	I: BlockImport<Block>,
 {
 	fn increment_version(&self) {
 		self.version.fetch_add(1, Ordering::SeqCst);
 	}
 
-	pub(crate) fn new(
-		algorithm: Algorithm,
-		block_import: BoxBlockImport<Block>,
-		justification_sync_link: L,
-	) -> Self {
+	pub(crate) fn new(algorithm: Algorithm, block_import: I, justification_sync_link: L) -> Self {
 		Self {
 			version: Arc::new(AtomicUsize::new(0)),
 			algorithm: Arc::new(algorithm),
@@ -216,11 +214,12 @@ where
 	}
 }
 
-impl<Block, Algorithm, L, Proof> Clone for MiningHandle<Block, Algorithm, L, Proof>
+impl<Block, Algorithm, L, Proof, I> Clone for MiningHandle<Block, Algorithm, L, Proof, I>
 where
 	Block: BlockT,
 	Algorithm: PowAlgorithm<Block>,
 	L: sc_consensus::JustificationSyncLink<Block>,
+	I: BlockImport<Block>,
 {
 	fn clone(&self) -> Self {
 		Self {

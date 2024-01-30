@@ -479,6 +479,32 @@ where
 	Ok(BasicQueue::new(verifier, block_import, justification_import, spawner, registry))
 }
 
+/// Parameters used to start a mining worker.
+pub struct PowParams<C, SC, I, A, PF, SO, L, CIDP> {
+	/// The client to interact with the chain.
+	pub client: Arc<C>,
+	/// A select chain implementation to select the best block.
+	pub select_chain: SC,
+	/// The block import.
+	pub block_import: I,
+	/// The proposer factory to build proposer instances.
+	pub algorithm: A,
+	/// The proposer factory to build proposer instances.
+	pub proposer_factory: PF,
+	/// The sync oracle that can give us the current sync status.
+	pub sync_oracle: SO,
+	/// Hook into the sync module to control the justification sync process.
+	pub justification_sync_link: L,
+	/// Something that can create the inherent data providers.
+	pub create_inherent_data_providers: CIDP,
+	/// Pre-runtime digest to be inserted into blocks.
+	pub pre_runtime: Option<Vec<u8>>,
+	/// Timeout for importing a block.
+	pub timeout: Duration,
+	/// Maximum time allowed for building a block.
+	pub build_time: Duration,
+}
+
 /// Start the mining worker for PoW. This function provides the necessary helper functions that can
 /// be used to implement a miner. However, it does not do the CPU-intensive mining itself.
 ///
@@ -488,35 +514,40 @@ where
 ///
 /// `pre_runtime` is a parameter that allows a custom additional pre-runtime digest to be inserted
 /// for blocks being built. This can encode authorship information, or just be a graffiti.
-pub fn start_mining_worker<Block, C, S, Algorithm, E, SO, L, CIDP>(
-	block_import: BoxBlockImport<Block>,
-	client: Arc<C>,
-	select_chain: S,
-	algorithm: Algorithm,
-	mut env: E,
-	sync_oracle: SO,
-	justification_sync_link: L,
-	pre_runtime: Option<Vec<u8>>,
-	create_inherent_data_providers: CIDP,
-	timeout: Duration,
-	build_time: Duration,
+pub fn start_mining_worker<Block, C, S, I, Algorithm, PF, SO, L, CIDP>(
+	pow_params: PowParams<C, S, I, Algorithm, PF, SO, L, CIDP>,
 ) -> (
-	MiningHandle<Block, Algorithm, L, <E::Proposer as Proposer<Block>>::Proof>,
+	MiningHandle<Block, Algorithm, L, <PF::Proposer as Proposer<Block>>::Proof, I>,
 	impl Future<Output = ()>,
 )
 where
 	Block: BlockT,
 	C: BlockchainEvents<Block> + 'static,
 	S: SelectChain<Block> + 'static,
+	I: BlockImport<Block> + Send + Sync + 'static,
 	Algorithm: PowAlgorithm<Block> + Clone,
 	Algorithm::Difficulty: Send + 'static,
-	E: Environment<Block> + Send + Sync + 'static,
-	E::Error: std::fmt::Debug,
-	E::Proposer: Proposer<Block>,
+	PF: Environment<Block> + Send + Sync + 'static,
+	PF::Error: std::fmt::Debug,
+	PF::Proposer: Proposer<Block>,
 	SO: SyncOracle + Clone + Send + Sync + 'static,
 	L: sc_consensus::JustificationSyncLink<Block>,
 	CIDP: CreateInherentDataProviders<Block, ()>,
 {
+	let PowParams {
+		client,
+		select_chain,
+		block_import,
+		algorithm,
+		mut proposer_factory,
+		sync_oracle,
+		justification_sync_link,
+		create_inherent_data_providers,
+		pre_runtime,
+		timeout,
+		build_time,
+	} = pow_params;
+
 	let mut timer = UntilImportedOrTimeout::new(client.import_notification_stream(), timeout);
 	let worker = MiningHandle::new(algorithm.clone(), block_import, justification_sync_link);
 	let worker_ret = worker.clone();
@@ -603,7 +634,7 @@ where
 
 			let pre_runtime = pre_runtime.clone();
 
-			let proposer = match env.init(&best_header).await {
+			let proposer = match proposer_factory.init(&best_header).await {
 				Ok(x) => x,
 				Err(err) => {
 					warn!(
