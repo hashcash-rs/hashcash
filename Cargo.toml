@@ -1,0 +1,21 @@
+[workspace.package]
+authors = ["Ryuichi Sakamoto <ryuichi@tuta.io>"]
+edition = "2021"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/hashcash-rs/hashcash.git"
+
+[workspace]
+resolver = "2"
+members = [
+]
+
+[workspace.dependencies]
+
+[profile.release]
+panic = "unwind"
+opt-level = 3
+
+[profile.production]
+inherits = "release"
+lto = true
+codegen-units = 1
