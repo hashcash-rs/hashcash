@@ -1,0 +1,3 @@
+[submodule "hashcash/randomx/sys/RandomX"]
+	path = hashcash/randomx/sys/RandomX
+	url = https://github.com/hashcash-rs/RandomX.git

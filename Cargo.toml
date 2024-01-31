@@ -7,11 +7,14 @@ repository = "https://github.com/hashcash-rs/hashcash.git"
 [workspace]
 resolver = "2"
 members = [
+  "hashcash/randomx",
   "substrate/client/consensus/pow",
 ]
 
 [workspace.dependencies]
+array-bytes = "6.2.2"
 async-trait = "0.1.77"
+bitflags = "2.4.2"
 futures = "0.3.30"
 futures-timer = "3.0.1"
 log = "0.4.20"
@@ -33,6 +36,8 @@ sp-inherents = { git = "https://github.com/paritytech/polkadot-sdk", branch = "r
 sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
 
 substrate-prometheus-endpoint = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0" }
+
+hashcash-randomx = { path = "hashcash/randomx" }
 
 [profile.release]
 panic = "unwind"
