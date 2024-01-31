@@ -39,9 +39,13 @@
 //! as the storage, but it is not recommended as it won't work well with light
 //! clients.
 
+mod traits;
 mod worker;
 
-pub use crate::worker::{MiningBuild, MiningHandle, MiningMetadata};
+pub use crate::{
+	traits::PreRuntimeProvider,
+	worker::{MiningBuild, MiningHandle, MiningMetadata},
+};
 
 use crate::worker::UntilImportedOrTimeout;
 use futures::{Future, StreamExt};
@@ -480,7 +484,7 @@ where
 }
 
 /// Parameters used to start a mining worker.
-pub struct PowParams<C, SC, I, A, PF, SO, L, CIDP> {
+pub struct PowParams<C, SC, I, A, PF, SO, L, CIDP, PP> {
 	/// The client to interact with the chain.
 	pub client: Arc<C>,
 	/// A select chain implementation to select the best block.
@@ -498,7 +502,7 @@ pub struct PowParams<C, SC, I, A, PF, SO, L, CIDP> {
 	/// Something that can create the inherent data providers.
 	pub create_inherent_data_providers: CIDP,
 	/// Pre-runtime digest to be inserted into blocks.
-	pub pre_runtime: Option<Vec<u8>>,
+	pub pre_runtime_provider: PP,
 	/// Timeout for importing a block.
 	pub timeout: Duration,
 	/// Maximum time allowed for building a block.
@@ -514,8 +518,8 @@ pub struct PowParams<C, SC, I, A, PF, SO, L, CIDP> {
 ///
 /// `pre_runtime` is a parameter that allows a custom additional pre-runtime digest to be inserted
 /// for blocks being built. This can encode authorship information, or just be a graffiti.
-pub fn start_mining_worker<Block, C, S, I, Algorithm, PF, SO, L, CIDP>(
-	pow_params: PowParams<C, S, I, Algorithm, PF, SO, L, CIDP>,
+pub fn start_mining_worker<Block, C, S, I, Algorithm, PF, SO, L, CIDP, PP>(
+	pow_params: PowParams<C, S, I, Algorithm, PF, SO, L, CIDP, PP>,
 ) -> (
 	MiningHandle<Block, Algorithm, L, <PF::Proposer as Proposer<Block>>::Proof, I>,
 	impl Future<Output = ()>,
@@ -533,6 +537,7 @@ where
 	SO: SyncOracle + Clone + Send + Sync + 'static,
 	L: sc_consensus::JustificationSyncLink<Block>,
 	CIDP: CreateInherentDataProviders<Block, ()>,
+	PP: PreRuntimeProvider<Block>,
 {
 	let PowParams {
 		client,
@@ -543,7 +548,7 @@ where
 		sync_oracle,
 		justification_sync_link,
 		create_inherent_data_providers,
-		pre_runtime,
+		pre_runtime_provider,
 		timeout,
 		build_time,
 	} = pow_params;
@@ -628,11 +633,17 @@ where
 			};
 
 			let mut inherent_digest = Digest::default();
-			if let Some(pre_runtime) = &pre_runtime {
-				inherent_digest.push(DigestItem::PreRuntime(POW_ENGINE_ID, pre_runtime.to_vec()));
-			}
 
-			let pre_runtime = pre_runtime.clone();
+			let mut pre_runtime = None;
+
+			for (id, data) in pre_runtime_provider.pre_runtime(&best_hash) {
+				if let Some(data) = data {
+					if id == POW_ENGINE_ID {
+						pre_runtime = Some(data.clone());
+					}
+					inherent_digest.push(DigestItem::PreRuntime(id, data));
+				}
+			}
 
 			let proposer = match proposer_factory.init(&best_header).await {
 				Ok(x) => x,
