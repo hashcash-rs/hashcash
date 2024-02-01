@@ -7,6 +7,7 @@ repository = "https://github.com/hashcash-rs/hashcash.git"
 [workspace]
 resolver = "2"
 members = [
+  "hashcash/pallets/wtema",
   "hashcash/randomx",
   "substrate/client/consensus/pow",
 ]
@@ -20,7 +21,12 @@ futures-timer = "3.0.1"
 log = "0.4.20"
 parity-scale-codec = { version = "3.6.9", default-features = false }
 parking_lot = "0.12.1"
+scale-info = { version = "2.10.0", default-features = false }
 thiserror = "1.0"
+
+frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
+frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
+pallet-timestamp = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
 
 sc-client-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0" }
 sc-consensus = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0" }
@@ -38,6 +44,7 @@ sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "rel
 substrate-prometheus-endpoint = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0" }
 
 hashcash-randomx = { path = "hashcash/randomx" }
+pallet-wtema = { path = "hashcash/pallets/wtema", default-features = false }
 
 [profile.release]
 panic = "unwind"
