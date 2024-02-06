@@ -8,7 +8,9 @@ repository = "https://github.com/hashcash-rs/hashcash.git"
 resolver = "2"
 members = [
   "hashcash/pallets/wtema",
+  "hashcash/primitives/core",
   "hashcash/randomx",
+  "hashcash/runtime",
   "substrate/client/consensus/pow",
 ]
 
@@ -22,11 +24,20 @@ log = "0.4.20"
 parity-scale-codec = { version = "3.6.9", default-features = false }
 parking_lot = "0.12.1"
 scale-info = { version = "2.10.0", default-features = false }
+smallvec = "1.13.1"
 thiserror = "1.0"
 
+frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
+frame-executive = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
 frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
 frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
+frame-system-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
+frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
+frame-try-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
+pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
 pallet-timestamp = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
+pallet-transaction-payment = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
+pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
 
 sc-client-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0" }
 sc-consensus = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0" }
@@ -38,12 +49,22 @@ sp-blockchain = { git = "https://github.com/paritytech/polkadot-sdk", branch = "
 sp-consensus = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0" }
 sp-consensus-pow = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
 sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
+sp-genesis-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
 sp-inherents = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
+sp-offchain = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
+sp-session = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
+sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
+sp-storage = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
+sp-transaction-pool = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
+sp-version = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
 
 substrate-prometheus-endpoint = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0" }
+substrate-wasm-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0" }
 
+hashcash-primitives-core = { path = "hashcash/primitives/core", default-features = false }
 hashcash-randomx = { path = "hashcash/randomx" }
+hashcash-runtime = { path = "hashcash/runtime", default-features = false }
 pallet-wtema = { path = "hashcash/pallets/wtema", default-features = false }
 
 [profile.release]
