@@ -53,8 +53,8 @@ use log::*;
 use parity_scale_codec::{Decode, Encode};
 use sc_client_api::{self, backend::AuxStore, BlockOf, BlockchainEvents};
 use sc_consensus::{
-	BasicQueue, BlockCheckParams, BlockImport, BlockImportParams, BoxBlockImport,
-	BoxJustificationImport, ForkChoiceStrategy, ImportResult, Verifier,
+	BasicQueue, BlockCheckParams, BlockImport, BlockImportParams, BoxJustificationImport,
+	ForkChoiceStrategy, ImportResult, Verifier,
 };
 use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder as BlockBuilderApi;
@@ -214,105 +214,52 @@ pub trait PowAlgorithm<B: BlockT> {
 }
 
 /// A block importer for PoW.
-pub struct PowBlockImport<B: BlockT, I, C, S, Algorithm, CIDP> {
-	algorithm: Algorithm,
+pub struct PowBlockImport<B, I, C, SC, A> {
 	inner: I,
-	select_chain: S,
 	client: Arc<C>,
-	create_inherent_data_providers: Arc<CIDP>,
-	check_inherents_after: <<B as BlockT>::Header as HeaderT>::Number,
+	select_chain: SC,
+	algorithm: A,
+	_marker: PhantomData<B>,
 }
 
-impl<B: BlockT, I: Clone, C, S: Clone, Algorithm: Clone, CIDP> Clone
-	for PowBlockImport<B, I, C, S, Algorithm, CIDP>
-{
+impl<B: BlockT, I: Clone, C, SC: Clone, A: Clone> Clone for PowBlockImport<B, I, C, SC, A> {
 	fn clone(&self) -> Self {
 		Self {
-			algorithm: self.algorithm.clone(),
 			inner: self.inner.clone(),
-			select_chain: self.select_chain.clone(),
 			client: self.client.clone(),
-			create_inherent_data_providers: self.create_inherent_data_providers.clone(),
-			check_inherents_after: self.check_inherents_after,
+			select_chain: self.select_chain.clone(),
+			algorithm: self.algorithm.clone(),
+			_marker: Default::default(),
 		}
 	}
 }
 
-impl<B, I, C, S, Algorithm, CIDP> PowBlockImport<B, I, C, S, Algorithm, CIDP>
+impl<B, I, C, SC, A> PowBlockImport<B, I, C, SC, A>
 where
 	B: BlockT,
 	I: BlockImport<B> + Send + Sync,
 	I::Error: Into<ConsensusError>,
 	C: ProvideRuntimeApi<B> + Send + Sync + HeaderBackend<B> + AuxStore + BlockOf,
 	C::Api: BlockBuilderApi<B>,
-	Algorithm: PowAlgorithm<B>,
-	CIDP: CreateInherentDataProviders<B, ()>,
+	A: PowAlgorithm<B>,
 {
 	/// Create a new block import suitable to be used in PoW
-	pub fn new(
-		inner: I,
-		client: Arc<C>,
-		algorithm: Algorithm,
-		check_inherents_after: <<B as BlockT>::Header as HeaderT>::Number,
-		select_chain: S,
-		create_inherent_data_providers: CIDP,
-	) -> Self {
-		Self {
-			inner,
-			client,
-			algorithm,
-			check_inherents_after,
-			select_chain,
-			create_inherent_data_providers: Arc::new(create_inherent_data_providers),
-		}
-	}
-
-	async fn check_inherents(
-		&self,
-		block: B,
-		at_hash: B::Hash,
-		inherent_data_providers: CIDP::InherentDataProviders,
-	) -> Result<(), Error<B>> {
-		if *block.header().number() < self.check_inherents_after {
-			return Ok(())
-		}
-
-		let inherent_data = inherent_data_providers
-			.create_inherent_data()
-			.await
-			.map_err(|e| Error::CreateInherents(e))?;
-
-		let inherent_res = self
-			.client
-			.runtime_api()
-			.check_inherents(at_hash, block, inherent_data)
-			.map_err(|e| Error::Client(e.into()))?;
-
-		if !inherent_res.ok() {
-			for (identifier, error) in inherent_res.into_errors() {
-				match inherent_data_providers.try_handle_error(&identifier, &error).await {
-					Some(res) => res.map_err(Error::CheckInherents)?,
-					None => return Err(Error::CheckInherentsUnknownError(identifier)),
-				}
-			}
-		}
-
-		Ok(())
+	pub fn new(inner: I, client: Arc<C>, select_chain: SC, algorithm: A) -> Self {
+		Self { inner, client, select_chain, algorithm, _marker: Default::default() }
 	}
 }
 
 #[async_trait::async_trait]
-impl<B, I, C, S, Algorithm, CIDP> BlockImport<B> for PowBlockImport<B, I, C, S, Algorithm, CIDP>
+impl<B, I, C, SC, A> BlockImport<B> for PowBlockImport<B, I, C, SC, A>
 where
 	B: BlockT,
 	I: BlockImport<B> + Send + Sync,
 	I::Error: Into<ConsensusError>,
-	S: SelectChain<B>,
 	C: ProvideRuntimeApi<B> + Send + Sync + HeaderBackend<B> + AuxStore + BlockOf,
 	C::Api: BlockBuilderApi<B>,
-	Algorithm: PowAlgorithm<B> + Send + Sync,
-	Algorithm::Difficulty: 'static + Send,
-	CIDP: CreateInherentDataProviders<B, ()> + Send + Sync,
+	SC: SelectChain<B>,
+	A: PowAlgorithm<B> + Send + Sync,
+	A::Difficulty: Send + 'static,
 {
 	type Error = ConsensusError;
 
@@ -339,27 +286,10 @@ where
 		let best_aux = PowAux::read::<_, B>(self.client.as_ref(), &best_hash)?;
 		let mut aux = PowAux::read::<_, B>(self.client.as_ref(), &parent_hash)?;
 
-		if let Some(inner_body) = block.body.take() {
-			let check_block = B::new(block.header.clone(), inner_body);
-
-			if !block.state_action.skip_execution_checks() {
-				self.check_inherents(
-					check_block.clone(),
-					parent_hash,
-					self.create_inherent_data_providers
-						.create_inherent_data_providers(parent_hash, ())
-						.await?,
-				)
-				.await?;
-			}
-
-			block.body = Some(check_block.deconstruct().1);
-		}
-
 		let inner_seal = fetch_seal::<B>(block.post_digests.last(), block.header.hash())?;
 
-		let intermediate = block
-			.remove_intermediate::<PowIntermediate<Algorithm::Difficulty>>(INTERMEDIATE_KEY)?;
+		let intermediate =
+			block.remove_intermediate::<PowIntermediate<A::Difficulty>>(INTERMEDIATE_KEY)?;
 
 		let difficulty = match intermediate.difficulty {
 			Some(difficulty) => difficulty,
@@ -403,20 +333,26 @@ where
 }
 
 /// A verifier for PoW blocks.
-pub struct PowVerifier<B: BlockT, Algorithm> {
-	algorithm: Algorithm,
+pub struct PowVerifier<B: BlockT, C, A, CIDP> {
+	client: Arc<C>,
+	algorithm: A,
+	create_inherent_data_providers: CIDP,
 	_marker: PhantomData<B>,
 }
 
-impl<B: BlockT, Algorithm> PowVerifier<B, Algorithm> {
-	pub fn new(algorithm: Algorithm) -> Self {
-		Self { algorithm, _marker: PhantomData }
+impl<B, C, A, CIDP> PowVerifier<B, C, A, CIDP>
+where
+	B: BlockT,
+	C: ProvideRuntimeApi<B>,
+	C::Api: BlockBuilderApi<B>,
+	A: PowAlgorithm<B>,
+	CIDP: CreateInherentDataProviders<B, ()>,
+{
+	pub fn new(client: Arc<C>, algorithm: A, create_inherent_data_providers: CIDP) -> Self {
+		Self { client, algorithm, create_inherent_data_providers, _marker: Default::default() }
 	}
 
-	fn check_header(&self, mut header: B::Header) -> Result<(B::Header, DigestItem), Error<B>>
-	where
-		Algorithm: PowAlgorithm<B>,
-	{
+	fn check_header(&self, mut header: B::Header) -> Result<(B::Header, DigestItem), Error<B>> {
 		let hash = header.hash();
 
 		let (seal, inner_seal) = match header.digest_mut().pop() {
@@ -437,22 +373,78 @@ impl<B: BlockT, Algorithm> PowVerifier<B, Algorithm> {
 
 		Ok((header, seal))
 	}
+
+	async fn check_inherents(
+		&self,
+		block: B,
+		at_hash: B::Hash,
+		create_inherent_data_providers: CIDP::InherentDataProviders,
+	) -> Result<(), Error<B>> {
+		let inherent_data = create_inherent_data_providers
+			.create_inherent_data()
+			.await
+			.map_err(Error::<B>::CreateInherents)?;
+
+		let inherent_res = self
+			.client
+			.runtime_api()
+			.check_inherents(at_hash, block, inherent_data)
+			.map_err(|e| Error::Client(e.into()))?;
+
+		if !inherent_res.ok() {
+			for (identifier, error) in inherent_res.into_errors() {
+				match create_inherent_data_providers.try_handle_error(&identifier, &error).await {
+					Some(res) => res.map_err(Error::CheckInherents)?,
+					None => return Err(Error::CheckInherentsUnknownError(identifier)),
+				}
+			}
+		}
+
+		Ok(())
+	}
 }
 
 #[async_trait::async_trait]
-impl<B: BlockT, Algorithm> Verifier<B> for PowVerifier<B, Algorithm>
+impl<B, C, A, CIDP> Verifier<B> for PowVerifier<B, C, A, CIDP>
 where
-	Algorithm: PowAlgorithm<B> + Send + Sync,
-	Algorithm::Difficulty: 'static + Send,
+	B: BlockT,
+	C: ProvideRuntimeApi<B> + Send + Sync,
+	C::Api: BlockBuilderApi<B>,
+	A: PowAlgorithm<B> + Send + Sync,
+	A::Difficulty: 'static + Send,
+	CIDP: CreateInherentDataProviders<B, ()> + Send + Sync,
 {
 	async fn verify(
 		&mut self,
 		mut block: BlockImportParams<B>,
 	) -> Result<BlockImportParams<B>, String> {
 		let hash = block.header.hash();
+		let parent_hash = *block.header.parent_hash();
+
+		let create_inherent_data_providers = self
+			.create_inherent_data_providers
+			.create_inherent_data_providers(parent_hash, ())
+			.await
+			.map_err(|e| Error::<B>::Client(ConsensusError::from(e).into()))?;
+
 		let (checked_header, seal) = self.check_header(block.header)?;
 
-		let intermediate = PowIntermediate::<Algorithm::Difficulty> { difficulty: None };
+		if let Some(inner_body) = block.body.take() {
+			let check_block = B::new(checked_header.clone(), inner_body);
+
+			if !block.state_action.skip_execution_checks() {
+				self.check_inherents(
+					check_block.clone(),
+					parent_hash,
+					create_inherent_data_providers,
+				)
+				.await?;
+			}
+
+			block.body = Some(check_block.deconstruct().1);
+		}
+
+		let intermediate = PowIntermediate::<A::Difficulty> { difficulty: None };
 		block.header = checked_header;
 		block.post_digests.push(seal);
 		block.insert_intermediate(INTERMEDIATE_KEY, intermediate);
@@ -465,22 +457,49 @@ where
 /// The PoW import queue type.
 pub type PowImportQueue<B> = BasicQueue<B>;
 
+/// Parameters passed to [`import_queue`].
+pub struct ImportQueueParams<'a, B, I, C, A, CIDP, S> {
+	/// The block import to use.
+	pub block_import: I,
+	/// The justification import.
+	pub justification_import: Option<BoxJustificationImport<B>>,
+	/// The client to interact with the chain.
+	pub client: Arc<C>,
+	/// PoW algorithm.
+	pub algorithm: A,
+	/// Something that can create the inherent data providers.
+	pub create_inherent_data_providers: CIDP,
+	/// The spawner to spawn background tasks.
+	pub spawner: &'a S,
+	/// The prometheus registry.
+	pub registry: Option<&'a Registry>,
+}
+
 /// Import queue for PoW engine.
-pub fn import_queue<B, Algorithm>(
-	block_import: BoxBlockImport<B>,
-	justification_import: Option<BoxJustificationImport<B>>,
-	algorithm: Algorithm,
-	spawner: &impl sp_core::traits::SpawnEssentialNamed,
-	registry: Option<&Registry>,
+pub fn import_queue<B, I, C, A, CIDP, S>(
+	ImportQueueParams {
+		block_import,
+		justification_import,
+		client,
+		algorithm,
+		create_inherent_data_providers,
+		spawner,
+		registry,
+	}: ImportQueueParams<B, I, C, A, CIDP, S>,
 ) -> Result<PowImportQueue<B>, sp_consensus::Error>
 where
 	B: BlockT,
-	Algorithm: PowAlgorithm<B> + Clone + Send + Sync + 'static,
-	Algorithm::Difficulty: Send,
+	I: BlockImport<B, Error = ConsensusError> + Send + Sync + 'static,
+	C: ProvideRuntimeApi<B> + Send + Sync + 'static,
+	C::Api: BlockBuilderApi<B>,
+	A: PowAlgorithm<B> + Clone + Send + Sync + 'static,
+	A::Difficulty: Send,
+	CIDP: CreateInherentDataProviders<B, ()> + Send + 'static,
+	S: sp_core::traits::SpawnEssentialNamed,
 {
-	let verifier = PowVerifier::new(algorithm);
+	let verifier = PowVerifier::new(client, algorithm, create_inherent_data_providers);
 
-	Ok(BasicQueue::new(verifier, block_import, justification_import, spawner, registry))
+	Ok(BasicQueue::new(verifier, Box::new(block_import), justification_import, spawner, registry))
 }
 
 /// Parameters used to start a mining worker.
@@ -491,7 +510,7 @@ pub struct PowParams<C, SC, I, A, PF, SO, L, CIDP, PP> {
 	pub select_chain: SC,
 	/// The block import.
 	pub block_import: I,
-	/// The proposer factory to build proposer instances.
+	/// PoW algorithm.
 	pub algorithm: A,
 	/// The proposer factory to build proposer instances.
 	pub proposer_factory: PF,
