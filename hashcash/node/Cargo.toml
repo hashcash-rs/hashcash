@@ -1,0 +1,52 @@
+[package]
+name = "hashcash"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+clap = { workspace = true, features = ["derive"] }
+futures.workspace = true
+jsonrpsee = { workspace = true, features = ["server"] }
+serde_json.workspace = true
+
+frame-benchmarking-cli.workspace = true
+pallet-transaction-payment-rpc.workspace = true
+
+sc-basic-authorship.workspace = true
+sc-cli.workspace = true
+sc-client-api.workspace = true
+sc-consensus.workspace = true
+sc-consensus-pow.workspace = true
+sc-executor.workspace = true
+sc-network.workspace = true
+sc-offchain.workspace = true
+sc-rpc-api.workspace = true
+sc-service.workspace = true
+sc-telemetry.workspace = true
+sc-transaction-pool.workspace = true
+sc-transaction-pool-api.workspace = true
+
+sp-api = { workspace = true, features = ["std"] }
+sp-block-builder = { workspace = true, features = ["std"] }
+sp-blockchain.workspace = true
+sp-core.workspace = true
+sp-io = { workspace = true, features = ["std"] }
+sp-runtime = { workspace = true, features = ["std"] }
+sp-timestamp = { workspace = true, features = ["std"] }
+
+substrate-frame-rpc-system.workspace = true
+
+hashcash-client-consensus.workspace = true
+hashcash-primitives-core = { workspace = true, features = ["runtime", "std"] }
+hashcash-runtime = { workspace = true, features = ["std"] }
+
+[build-dependencies]
+substrate-build-script-utils.workspace = true
+
+[features]
+runtime-benchmarks = []

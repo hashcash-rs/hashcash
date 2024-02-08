@@ -1,0 +1,24 @@
+[package]
+name = "hashcash-client-consensus"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+futures.workspace = true
+hashcash-primitives-core = { workspace = true, features = ["std"] }
+hashcash-randomx.workspace = true
+parity-scale-codec = { workspace = true, features = ["std"] }
+parking_lot.workspace = true
+rand.workspace = true
+schnellru.workspace = true
+sc-client-api.workspace = true
+sc-consensus.workspace = true
+sc-consensus-pow.workspace = true
+sp-api = { workspace = true, features = ["std"] }
+sp-consensus-pow = { workspace = true, features = ["std"] }
+sp-runtime = { workspace = true, features = ["std"] }
