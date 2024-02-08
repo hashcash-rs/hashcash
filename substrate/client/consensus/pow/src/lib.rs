@@ -39,13 +39,9 @@
 //! as the storage, but it is not recommended as it won't work well with light
 //! clients.
 
-mod traits;
 mod worker;
 
-pub use crate::{
-	traits::PreRuntimeProvider,
-	worker::{MiningBuild, MiningHandle, MiningMetadata},
-};
+pub use crate::worker::{MiningBuild, MiningHandle, MiningMetadata};
 
 use crate::worker::UntilImportedOrTimeout;
 use futures::{Future, StreamExt};
@@ -65,7 +61,7 @@ use sp_inherents::{CreateInherentDataProviders, InherentDataProvider};
 use sp_runtime::{
 	generic::{BlockId, Digest, DigestItem},
 	traits::{Block as BlockT, Header as HeaderT},
-	RuntimeString,
+	ConsensusEngineId, RuntimeString,
 };
 use std::{cmp::Ordering, marker::PhantomData, sync::Arc, time::Duration};
 use substrate_prometheus_endpoint::Registry;
@@ -736,5 +732,28 @@ fn fetch_seal<B: BlockT>(digest: Option<&DigestItem>, hash: B::Hash) -> Result<V
 				Err(Error::<B>::WrongEngine(*id))
 			},
 		_ => Err(Error::<B>::HeaderUnsealed(hash)),
+	}
+}
+
+/// A trait that provides multiple pre-runtime digests for different consensus engines.
+pub trait PreRuntimeProvider<B: BlockT> {
+	/// Returns a set of pre-runtime digests.
+	fn pre_runtime(&self, best_hash: &B::Hash) -> Vec<(ConsensusEngineId, Option<Vec<u8>>)>;
+}
+
+/// Empty pre-runtime digest provider.
+pub struct EmptyPreRuntimeProvider<B> {
+	_marker: PhantomData<B>,
+}
+
+impl<B> EmptyPreRuntimeProvider<B> {
+	pub fn new() -> Self {
+		Self { _marker: Default::default() }
+	}
+}
+
+impl<B: BlockT> PreRuntimeProvider<B> for EmptyPreRuntimeProvider<B> {
+	fn pre_runtime(&self, _best_hash: &B::Hash) -> Vec<(ConsensusEngineId, Option<Vec<u8>>)> {
+		Vec::new()
 	}
 }
