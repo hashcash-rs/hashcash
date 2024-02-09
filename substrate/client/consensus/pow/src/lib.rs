@@ -41,7 +41,7 @@
 
 mod worker;
 
-pub use crate::worker::{MiningBuild, MiningHandle, MiningMetadata};
+pub use crate::worker::{MiningBuild, MiningHandle, MiningMetadata, Version};
 
 use crate::worker::UntilImportedOrTimeout;
 use futures::{Future, StreamExt};
