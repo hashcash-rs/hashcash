@@ -22,7 +22,7 @@ use futures::{
 };
 use futures_timer::Delay;
 use log::*;
-use parking_lot::Mutex;
+use parking_lot::{Mutex, RwLock};
 use sc_client_api::ImportNotifications;
 use sc_consensus::{BlockImport, BlockImportParams, StateAction, StorageChanges};
 use sp_consensus::{BlockOrigin, Proposal};
@@ -78,7 +78,7 @@ pub struct MiningHandle<
 	version: Arc<AtomicUsize>,
 	algorithm: Arc<Algorithm>,
 	justification_sync_link: Arc<L>,
-	build: Arc<Mutex<Option<MiningBuild<Block, Algorithm, Proof>>>>,
+	build: Arc<RwLock<Option<MiningBuild<Block, Algorithm, Proof>>>>,
 	block_import: Arc<Mutex<I>>,
 }
 
@@ -99,19 +99,19 @@ where
 			version: Arc::new(AtomicUsize::new(0)),
 			algorithm: Arc::new(algorithm),
 			justification_sync_link: Arc::new(justification_sync_link),
-			build: Arc::new(Mutex::new(None)),
+			build: Arc::new(RwLock::new(None)),
 			block_import: Arc::new(Mutex::new(block_import)),
 		}
 	}
 
 	pub(crate) fn on_major_syncing(&self) {
-		let mut build = self.build.lock();
+		let mut build = self.build.write();
 		*build = None;
 		self.increment_version();
 	}
 
 	pub(crate) fn on_build(&self, value: MiningBuild<Block, Algorithm, Proof>) {
-		let mut build = self.build.lock();
+		let mut build = self.build.write();
 		*build = Some(value);
 		self.increment_version();
 	}
@@ -127,12 +127,12 @@ where
 	/// Get the current best hash. `None` if the worker has just started or the client is doing
 	/// major syncing.
 	pub fn best_hash(&self) -> Option<Block::Hash> {
-		self.build.lock().as_ref().map(|b| b.metadata.best_hash)
+		self.build.read().as_ref().map(|b| b.metadata.best_hash)
 	}
 
 	/// Get a copy of the current mining metadata, if available.
 	pub fn metadata(&self) -> Option<MiningMetadata<Block::Hash, Algorithm::Difficulty>> {
-		self.build.lock().as_ref().map(|b| b.metadata.clone())
+		self.build.read().as_ref().map(|b| b.metadata.clone())
 	}
 
 	/// Submit a mined seal. The seal will be validated again. Returns true if the submission is
@@ -162,7 +162,7 @@ where
 		}
 
 		let build = if let Some(build) = {
-			let mut build = self.build.lock();
+			let mut build = self.build.write();
 			let value = build.take();
 			if value.is_some() {
 				self.increment_version();
