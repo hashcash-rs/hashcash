@@ -10,4 +10,4 @@ mod randomx;
 
 pub use algorithm::*;
 pub use common::*;
-pub use miner::Miner;
+pub use miner::{start_miner, MinerParams};

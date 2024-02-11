@@ -9,12 +9,22 @@ use substrate::{
 };
 
 #[derive(Debug, clap::Parser)]
+pub struct CliOptions {
+	/// Specify the number of threads to use for mining.
+	#[arg(long, value_name = "COUNT")]
+	pub threads: Option<usize>,
+}
+
+#[derive(Debug, clap::Parser)]
 pub struct Cli {
 	#[command(subcommand)]
 	pub subcommand: Option<Subcommand>,
 
 	#[clap(flatten)]
 	pub run: RunCmd,
+
+	#[clap(flatten)]
+	pub options: CliOptions,
 }
 
 impl SubstrateCli for Cli {

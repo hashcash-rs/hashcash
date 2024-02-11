@@ -1,11 +1,11 @@
 // Copyright (c) 2024 Ryuichi Sakamoto
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::preludes::*;
+use crate::{cli::CliOptions, preludes::*};
 
 use futures::FutureExt;
 use hashcash::{
-	client::consensus::{Miner, RandomXAlgorithm},
+	client::consensus::{MinerParams, RandomXAlgorithm},
 	primitives::core::opaque::Block,
 	runtime::RuntimeApi,
 };
@@ -123,7 +123,7 @@ pub fn new_partial(config: &Configuration) -> Result<Service, Error> {
 	})
 }
 
-pub fn new_full(config: Configuration) -> Result<TaskManager, Error> {
+pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManager, Error> {
 	let service::PartialComponents {
 		client,
 		backend,
@@ -232,8 +232,11 @@ pub fn new_full(config: Configuration) -> Result<TaskManager, Error> {
 			.spawn_handle()
 			.spawn_blocking("pow", Some("block-authoring"), worker_task);
 
-		let miner = Miner::new(client, Arc::new(worker));
-		miner.start(1);
+		hashcash::client::consensus::start_miner(MinerParams {
+			client,
+			handle: Arc::new(worker),
+			threads_count: options.threads.unwrap_or(1),
+		});
 	}
 
 	network_starter.start_network();

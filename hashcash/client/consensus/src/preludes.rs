@@ -1,6 +1,8 @@
 // Copyright (c) 2024 Ryuichi Sakamoto
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+pub const LOG_TARGET: &'static str = "consensus";
+
 pub mod hashcash {
 	pub mod primitives {
 		pub use hashcash_primitives_core as core;

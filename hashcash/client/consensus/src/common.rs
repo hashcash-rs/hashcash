@@ -9,7 +9,7 @@ use substrate::{
 	codec::{Decode, Encode},
 };
 
-#[derive(Decode, Encode)]
+#[derive(Debug, Decode, Encode)]
 pub struct Seal {
 	pub nonce: Nonce,
 }

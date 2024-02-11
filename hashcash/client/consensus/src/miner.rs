@@ -4,11 +4,16 @@
 use crate::{common, preludes::*, randomx};
 
 use hashcash::randomx::{RandomXFlags, RandomXVm};
+use log::*;
+use rand::{thread_rng, Rng};
 use std::{sync::Arc, time::Duration};
 pub use substrate::{
 	client::{
 		api::HeaderBackend,
-		consensus::{pow::PowAlgorithm, BlockImport, JustificationSyncLink},
+		consensus::{
+			pow::{PowAlgorithm, Version},
+			BlockImport, JustificationSyncLink,
+		},
 	},
 	codec::Encode,
 	primitives::{api::ProvideRuntimeApi, consensus::pow::Seal, runtime::traits::Block as BlockT},
@@ -19,6 +24,7 @@ pub type MiningMetadata = sc_consensus_pow::MiningMetadata<Hash, Difficulty>;
 pub trait MiningHandle {
 	fn metadata(&self) -> Option<MiningMetadata>;
 	fn submit(&self, seal: Seal) -> bool;
+	fn version(&self) -> Version;
 }
 
 impl<B, A, L, P, I> MiningHandle for sc_consensus_pow::MiningHandle<B, A, L, P, I>
@@ -35,11 +41,24 @@ where
 	fn submit(&self, seal: Seal) -> bool {
 		futures::executor::block_on(sc_consensus_pow::MiningHandle::submit(self, seal))
 	}
+
+	fn version(&self) -> Version {
+		sc_consensus_pow::MiningHandle::version(self)
+	}
+}
+
+#[derive(Debug)]
+enum Error {
+	EmptyMetadata,
+	SeedHashNotFetched,
+	DatasetNotAllocated,
+	VmNotCreated,
 }
 
 pub struct Miner<B: BlockT, C, H> {
 	client: Arc<C>,
 	handle: Arc<H>,
+	nonce: Nonce,
 	_marker: std::marker::PhantomData<B>,
 }
 
@@ -49,45 +68,137 @@ where
 	H: MiningHandle + Send + Sync + 'static,
 {
 	pub fn new(client: Arc<C>, handle: Arc<H>) -> Self {
-		Miner { client, handle, _marker: Default::default() }
+		Miner { client, handle, nonce: thread_rng().gen(), _marker: Default::default() }
 	}
 
 	pub fn start(&self, threads_count: usize) {
-		for i in 0..threads_count {
+		let threads_count = threads_count.max(1);
+		info!(target: LOG_TARGET, "⚒️  Starting Miner with {} thread(s)", threads_count);
+
+		for thread_index in 0..threads_count {
 			let client = self.client.clone();
 			let handle = self.handle.clone();
-			let nonce = i as Nonce;
+			let nonce = self.nonce + thread_index as Nonce;
 
-			std::thread::spawn(move || loop {
-				let mut nonce = nonce;
+			std::thread::spawn(move || {
+				let mut version = handle.version();
+				let mut seed_hash = Hash::default();
+				let mut vm: Option<RandomXVm> = None;
+				let mut error: Option<Error> = None;
+				let mut is_new_vm = false;
+				let mut is_build_changed = false;
 
 				loop {
-					let metadata = handle.metadata();
+					if error.is_some() {
+						match error.take().unwrap() {
+							// on_major_syncing
+							Error::EmptyMetadata => (),
+							err =>
+								warn!(target: LOG_TARGET, "Error in miner thread-{}: {:?}", thread_index, err),
+						}
+						std::thread::sleep(Duration::from_secs(1));
+					}
 
-					if let Some(metadata) = metadata {
-						let seed_hash =
-							common::seed_hash(&client, &BlockId::Hash(metadata.best_hash))
-								.expect("");
-						let dataset = randomx::get_or_init_dataset(&seed_hash).expect("");
-						let mut vm = RandomXVm::new(
+					let mut nonce = nonce;
+
+					let metadata = match handle.metadata() {
+						Some(metadata) => metadata,
+						None => {
+							error = Some(Error::EmptyMetadata);
+							continue;
+						},
+					};
+
+					match common::seed_hash(&client, &BlockId::Hash(metadata.best_hash)) {
+						Ok(new_seed_hash) =>
+							if seed_hash != new_seed_hash {
+								seed_hash = new_seed_hash;
+								vm = None;
+							},
+						Err(_) => {
+							error = Some(Error::SeedHashNotFetched);
+							continue;
+						},
+					}
+
+					if vm.is_none() {
+						let dataset = match randomx::get_or_init_dataset(&seed_hash) {
+							Ok(dataset) => dataset,
+							Err(_) => {
+								error = Some(Error::DatasetNotAllocated);
+								continue;
+							},
+						};
+
+						vm = match RandomXVm::new(
 							randomx::get_flags() | RandomXFlags::FullMem,
 							None,
 							Some(dataset),
-						)
-						.expect("");
-						let hash =
-							Hash::from(vm.calculate_hash(&(metadata.pre_hash, nonce).encode()));
+						) {
+							Ok(vm) => Some(vm),
+							Err(_) => {
+								error = Some(Error::VmNotCreated);
+								continue;
+							},
+						};
+						is_new_vm = true;
+						is_build_changed = false;
+					}
 
-						if common::check_hash(&hash, metadata.difficulty) {
-							handle.submit(common::Seal { nonce }.encode());
+					loop {
+						let new_version = handle.version();
+						if version != new_version {
+							version = new_version;
+							is_build_changed = true;
+							break;
 						}
 
-						nonce += threads_count as Nonce;
-					} else {
-						std::thread::sleep(Duration::from_secs(1));
+						if is_new_vm {
+							is_new_vm = false;
+							vm.as_mut()
+								.unwrap()
+								.calculate_hash_first(&(metadata.pre_hash, nonce).encode());
+						} else {
+							let seal = common::Seal { nonce };
+							if !is_build_changed {
+								nonce += threads_count as Nonce;
+							}
+
+							let hash = Hash::from(
+								vm.as_mut()
+									.unwrap()
+									.calculate_hash_next(&(metadata.pre_hash, nonce).encode()),
+							);
+
+							if !is_build_changed && common::check_hash(&hash, metadata.difficulty) {
+								handle.submit(seal.encode());
+							}
+							is_build_changed = false;
+						}
 					}
 				}
 			});
 		}
 	}
+}
+
+pub struct MinerParams<C, H>
+where
+	C: ProvideRuntimeApi<Block> + HeaderBackend<Block> + 'static,
+	H: MiningHandle + Send + Sync + 'static,
+{
+	/// Client handle for fetching seed hash.
+	pub client: Arc<C>,
+	/// Mining handle for fetching metadata and submitting seal.
+	pub handle: Arc<H>,
+	/// Number of threads to use for mining.
+	pub threads_count: usize,
+}
+
+pub fn start_miner<C, H>(params: MinerParams<C, H>)
+where
+	C: ProvideRuntimeApi<Block> + HeaderBackend<Block> + 'static,
+	H: MiningHandle + Send + Sync + 'static,
+{
+	Miner::new(params.client, params.handle).start(params.threads_count);
 }

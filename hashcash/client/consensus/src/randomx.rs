@@ -16,6 +16,8 @@ use std::{
 static CACHES: OnceLock<Arc<Mutex<LruMap<Hash, Arc<RandomXCache>>>>> = OnceLock::new();
 static DATASETS: OnceLock<Arc<Mutex<LruMap<Hash, Arc<RandomXDataset>>>>> = OnceLock::new();
 
+static LARGE_PAGES: OnceLock<bool> = OnceLock::new();
+
 pub struct CachedVm {
 	pub seed_hash: Hash,
 	pub vm: RandomXVm,
@@ -39,7 +41,19 @@ impl From<RandomXError> for Error {
 }
 
 pub(crate) fn get_flags() -> RandomXFlags {
-	RandomXFlags::default()
+	let use_large_pages = *LARGE_PAGES.get_or_init(|| {
+		match RandomXCache::new(RandomXFlags::default() | RandomXFlags::LargePages) {
+			Ok(_) => true,
+			Err(_) => {
+				log::debug!(target: LOG_TARGET, "RandomX allocation using large pages failed");
+				false
+			},
+		}
+	});
+	match use_large_pages {
+		true => RandomXFlags::default() | RandomXFlags::LargePages,
+		false => RandomXFlags::default(),
+	}
 }
 
 pub(crate) fn get_or_init_cache(seed_hash: &Hash) -> Result<Arc<RandomXCache>, Error> {
@@ -85,13 +99,16 @@ pub(crate) fn get_or_init_dataset(seed_hash: &Hash) -> Result<Arc<RandomXDataset
 }
 
 pub fn calculate_hash(seed_hash: &Hash, input: &[u8]) -> Result<Hash, Error> {
+	let flags = match get_flags() {
+		flags if flags.contains(RandomXFlags::Jit) => flags | RandomXFlags::Secure,
+		flags => flags,
+	};
 	match FAST_VM.with_borrow_mut(|cached| match cached {
 		Some(cached) if &cached.seed_hash == seed_hash =>
 			Ok::<_, Error>(Hash::from(cached.vm.calculate_hash(input))),
 		_ => match get_dataset(seed_hash)? {
 			Some(dataset) => {
-				let mut vm =
-					RandomXVm::new(get_flags() | RandomXFlags::FullMem, None, Some(dataset))?;
+				let mut vm = RandomXVm::new(flags | RandomXFlags::FullMem, None, Some(dataset))?;
 				let hash = Hash::from(vm.calculate_hash(input));
 				*cached = Some(CachedVm { seed_hash: *seed_hash, vm });
 				Ok(hash)
@@ -105,7 +122,7 @@ pub fn calculate_hash(seed_hash: &Hash, input: &[u8]) -> Result<Hash, Error> {
 				Ok(Hash::from(cached.vm.calculate_hash(input))),
 			_ => {
 				let cache = get_or_init_cache(seed_hash)?;
-				let mut vm = RandomXVm::new(get_flags(), Some(cache), None)?;
+				let mut vm = RandomXVm::new(flags, Some(cache), None)?;
 				let hash = Hash::from(vm.calculate_hash(input));
 				*cached = Some(CachedVm { seed_hash: *seed_hash, vm });
 				Ok(hash)
