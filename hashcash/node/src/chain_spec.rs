@@ -76,7 +76,7 @@ fn testnet_genesis(
 		"balances": {
 			"balances": endowed_accounts.iter().cloned().map(|k| (k, 1u64 << 60)).collect::<Vec<_>>(),
 		},
-		"wtema": {
+		"difficultyAdjustment": {
 			"difficulty": initial_difficulty,
 		},
 	})

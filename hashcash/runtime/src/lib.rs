@@ -45,7 +45,7 @@ construct_runtime! {
 		Timestamp: pallets::timestamp = 1,
 		Balances: pallets::balances = 2,
 		TransactionPayment: pallets::transaction_payment = 16,
-		Wtema: pallets::wtema = 17,
+		DifficultyAdjustment: pallets::wtema = 17,
 	}
 }
 
@@ -185,7 +185,7 @@ impl_runtime_apis! {
 
 	impl substrate::primitives::consensus::pow::DifficultyApi<Block, Difficulty> for Runtime {
 		fn difficulty() -> Difficulty {
-			Wtema::difficulty()
+			DifficultyAdjustment::difficulty()
 		}
 	}
 

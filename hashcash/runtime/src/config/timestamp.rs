@@ -12,6 +12,6 @@ parameter_types! {
 impl substrate::pallets::timestamp::Config for Runtime {
 	type MinimumPeriod = MinimumPeriod;
 	type Moment = Moment;
-	type OnTimestampSet = Wtema;
+	type OnTimestampSet = DifficultyAdjustment;
 	type WeightInfo = substrate::pallets::timestamp::weights::SubstrateWeight<Self>;
 }
