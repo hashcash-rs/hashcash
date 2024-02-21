@@ -38,3 +38,5 @@ pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 
 pub type UncheckedExtrinsic =
 	generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
+
+pub use substrate::{frames::system::Call as SystemCall, pallets::balances::Call as BalancesCall};

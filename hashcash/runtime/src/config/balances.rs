@@ -3,11 +3,13 @@
 
 use crate::*;
 
-use hashcash::primitives::core::{units::DOLLARS, Balance};
+use hashcash::primitives::core::{units::CENTS, Balance};
 use substrate::primitives::runtime::traits::ConstU32;
 
+pub const EXISTENTIAL_DEPOSIT: Balance = 1 * CENTS;
+
 parameter_types! {
-	pub const ExistentialDeposit: Balance = 1 * DOLLARS;
+	pub const ExistentialDeposit: Balance = EXISTENTIAL_DEPOSIT;
 }
 
 impl substrate::pallets::balances::Config for Runtime {

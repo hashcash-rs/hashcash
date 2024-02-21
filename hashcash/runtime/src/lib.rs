@@ -11,7 +11,7 @@ mod preludes;
 use preludes::*;
 
 mod common;
-mod config;
+pub mod config;
 mod version;
 
 pub use common::*;

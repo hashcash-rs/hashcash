@@ -33,7 +33,6 @@ pub mod substrate {
 			pub use sc_transaction_pool_api as api;
 		}
 	}
-
 	pub mod frames {
 		pub mod benchmarking {
 			pub use frame_benchmarking_cli as cli;
@@ -42,20 +41,20 @@ pub mod substrate {
 			pub use substrate_frame_rpc_system as rpc;
 		}
 	}
-
 	pub mod pallets {
 		pub mod transaction_payment {
 			pub use pallet_transaction_payment_rpc as rpc;
 		}
 	}
-
 	pub mod primitives {
 		pub use sp_api as api;
 		pub use sp_block_builder as block_builder;
 		pub use sp_blockchain as blockchain;
 		pub use sp_core as core;
+		pub use sp_inherents as inherents;
 		pub use sp_io as io;
 		pub use sp_keyring as keyring;
+		pub use sp_runtime as runtime;
 		pub use sp_timestamp as timestamp;
 	}
 }
