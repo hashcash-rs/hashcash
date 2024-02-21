@@ -5,7 +5,7 @@ use crate::{cli::CliOptions, preludes::*};
 
 use futures::FutureExt;
 use hashcash::{
-	client::consensus::{MinerParams, RandomXAlgorithm},
+	client::consensus::{inherents::coinbase::InherentDataProvider, MinerParams, RandomXAlgorithm},
 	primitives::core::opaque::Block,
 	runtime::RuntimeApi,
 };
@@ -54,7 +54,7 @@ pub type Service = service::PartialComponents<
 	),
 >;
 
-pub fn new_partial(config: &Configuration) -> Result<Service, Error> {
+pub fn new_partial(config: &Configuration, options: &CliOptions) -> Result<Service, Error> {
 	let telemetry = config
 		.telemetry_endpoints
 		.clone()
@@ -99,13 +99,19 @@ pub fn new_partial(config: &Configuration) -> Result<Service, Error> {
 		algorithm.clone(),
 	);
 
+	let author = options.author_id.clone().unwrap();
 	let import_queue = substrate::client::consensus::pow::import_queue(ImportQueueParams {
 		block_import: pow_block_import.clone(),
 		justification_import: None,
 		client: client.clone(),
 		algorithm: algorithm.clone(),
-		create_inherent_data_providers: move |_, ()| async move {
-			Ok(TimestampInherentDataProvider::from_system_time())
+		create_inherent_data_providers: move |_, ()| {
+			let author = author.clone();
+			async move {
+				let coinbase = InherentDataProvider::new(author.clone());
+				let timestamp = TimestampInherentDataProvider::from_system_time();
+				Ok((coinbase, timestamp))
+			}
 		},
 		spawner: &task_manager.spawn_essential_handle(),
 		registry: config.prometheus_registry(),
@@ -133,7 +139,7 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 		select_chain,
 		transaction_pool,
 		other: (block_import, mut telemetry),
-	} = new_partial(&config)?;
+	} = new_partial(&config, &options)?;
 
 	let net_config = FullNetworkConfiguration::new(&config.network);
 
@@ -221,8 +227,14 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 				sync_oracle: sync_service.clone(),
 				justification_sync_link: sync_service.clone(),
 				pre_runtime_provider: EmptyPreRuntimeProvider::<Block>::new(),
-				create_inherent_data_providers: move |_, ()| async move {
-					Ok(TimestampInherentDataProvider::from_system_time())
+				create_inherent_data_providers: move |_, ()| {
+					let author = options.author_id.clone().unwrap();
+					async move {
+						let coinbase = InherentDataProvider::new(author.clone());
+						let timestamp = TimestampInherentDataProvider::from_system_time();
+						coinbase.print_author();
+						Ok((coinbase, timestamp))
+					}
 				},
 				timeout: Duration::new(10, 0),
 				build_time: Duration::new(10, 0),

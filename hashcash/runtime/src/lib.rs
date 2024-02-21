@@ -42,8 +42,9 @@ use substrate::{
 construct_runtime! {
 	pub struct Runtime {
 		System: frames::system = 0,
-		Timestamp: pallets::timestamp = 1,
-		Balances: pallets::balances = 2,
+		Timestamp: pallets::timestamp = 2,
+		Balances: pallets::balances = 3,
+		Coinbase: pallets::coinbase = 4,
 		TransactionPayment: pallets::transaction_payment = 16,
 		DifficultyAdjustment: pallets::wtema = 17,
 	}

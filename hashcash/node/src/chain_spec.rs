@@ -4,15 +4,12 @@
 use crate::preludes::*;
 
 use hashcash::{
-	primitives::core::{AccountId, AccountPublic, Difficulty},
+	primitives::core::{AccountId, Difficulty},
 	runtime::{RuntimeGenesisConfig, WASM_BINARY},
 };
 use substrate::{
 	client::service::{ChainType, GenericChainSpec},
-	primitives::{
-		core::{sr25519, Pair, Public},
-		runtime::traits::IdentifyAccount,
-	},
+	primitives::keyring::AccountKeyring,
 };
 
 pub type ChainSpec = GenericChainSpec<RuntimeGenesisConfig>;
@@ -27,10 +24,10 @@ pub fn development_config() -> Result<ChainSpec, String> {
 	.with_chain_type(ChainType::Development)
 	.with_genesis_config_patch(testnet_genesis(
 		vec![
-			get_account_id_from_seed::<sr25519::Public>("Alice"),
-			get_account_id_from_seed::<sr25519::Public>("Bob"),
-			get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-			get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+			AccountKeyring::Alice.to_account_id(),
+			AccountKeyring::Bob.to_account_id(),
+			AccountKeyring::AliceStash.to_account_id(),
+			AccountKeyring::BobStash.to_account_id(),
 		],
 		10_000,
 		true,
@@ -48,18 +45,18 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 	.with_chain_type(ChainType::Local)
 	.with_genesis_config_patch(testnet_genesis(
 		vec![
-			get_account_id_from_seed::<sr25519::Public>("Alice"),
-			get_account_id_from_seed::<sr25519::Public>("Bob"),
-			get_account_id_from_seed::<sr25519::Public>("Charlie"),
-			get_account_id_from_seed::<sr25519::Public>("Dave"),
-			get_account_id_from_seed::<sr25519::Public>("Eve"),
-			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-			get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-			get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-			get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-			get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-			get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-			get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+			AccountKeyring::Alice.to_account_id(),
+			AccountKeyring::Bob.to_account_id(),
+			AccountKeyring::Charlie.to_account_id(),
+			AccountKeyring::Dave.to_account_id(),
+			AccountKeyring::Eve.to_account_id(),
+			AccountKeyring::Ferdie.to_account_id(),
+			AccountKeyring::AliceStash.to_account_id(),
+			AccountKeyring::BobStash.to_account_id(),
+			AccountKeyring::CharlieStash.to_account_id(),
+			AccountKeyring::DaveStash.to_account_id(),
+			AccountKeyring::EveStash.to_account_id(),
+			AccountKeyring::FerdieStash.to_account_id(),
 		],
 		40_000,
 		true,
@@ -80,16 +77,4 @@ fn testnet_genesis(
 			"difficulty": initial_difficulty,
 		},
 	})
-}
-
-pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
-where
-	AccountPublic: From<<TPublic::Pair as Pair>::Public>,
-{
-	AccountPublic::from(
-		TPublic::Pair::from_string(&format!("//{}", seed), None)
-			.expect("static values are valid; qed")
-			.public(),
-	)
-	.into_account()
 }

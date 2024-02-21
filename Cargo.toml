@@ -9,7 +9,9 @@ resolver = "2"
 members = [
   "hashcash/client/consensus",
   "hashcash/node",
+  "hashcash/pallets/coinbase",
   "hashcash/pallets/wtema",
+  "hashcash/primitives",
   "hashcash/primitives/core",
   "hashcash/randomx",
   "hashcash/runtime",
@@ -71,6 +73,7 @@ sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "releas
 sp-genesis-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
 sp-inherents = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
 sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
+sp-keyring = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0" }
 sp-offchain = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
 sp-session = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0", default-features = false }
@@ -86,9 +89,11 @@ substrate-prometheus-endpoint = { git = "https://github.com/paritytech/polkadot-
 substrate-wasm-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.6.0" }
 
 hashcash-client-consensus = { path = "hashcash/client/consensus" }
+hashcash-primitives = { path = "hashcash/primitives", default-features = false }
 hashcash-primitives-core = { path = "hashcash/primitives/core", default-features = false }
 hashcash-randomx = { path = "hashcash/randomx" }
 hashcash-runtime = { path = "hashcash/runtime", default-features = false }
+pallet-coinbase = { path = "hashcash/pallets/coinbase", default-features = false }
 pallet-wtema = { path = "hashcash/pallets/wtema", default-features = false }
 
 [profile.release]

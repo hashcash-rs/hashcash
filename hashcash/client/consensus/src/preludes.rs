@@ -4,9 +4,7 @@
 pub const LOG_TARGET: &'static str = "consensus";
 
 pub mod hashcash {
-	pub mod primitives {
-		pub use hashcash_primitives_core as core;
-	}
+	pub use hashcash_primitives as primitives;
 	pub use hashcash_randomx as randomx;
 }
 
@@ -23,6 +21,8 @@ pub mod substrate {
 		pub mod consensus {
 			pub use sp_consensus_pow as pow;
 		}
+		pub use sp_core as core;
+		pub use sp_inherents as inherents;
 		pub use sp_runtime as runtime;
 	}
 	pub use parity_scale_codec as codec;
@@ -30,5 +30,5 @@ pub mod substrate {
 
 pub use hashcash::primitives::core::{
 	opaque::{Block, BlockId},
-	BlockNumber, Difficulty, Hash, Nonce, U256,
+	AccountId, BlockNumber, Difficulty, Hash, Nonce, U256,
 };

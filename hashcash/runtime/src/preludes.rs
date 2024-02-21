@@ -3,6 +3,7 @@
 
 pub mod hashcash {
 	pub mod pallets {
+		pub use pallet_coinbase as coinbase;
 		pub use pallet_wtema as wtema;
 	}
 	pub mod primitives {

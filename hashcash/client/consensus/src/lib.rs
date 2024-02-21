@@ -5,6 +5,7 @@ mod preludes;
 
 mod algorithm;
 mod common;
+pub mod inherents;
 mod miner;
 mod randomx;
 

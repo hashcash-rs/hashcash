@@ -3,9 +3,11 @@
 
 use crate::{chain_spec, preludes::*};
 
+use hashcash::primitives::core::AccountId;
 use substrate::{
-	client::cli::{commands::*, RunCmd, SubstrateCli},
+	client::cli::{self, commands::*, CliConfiguration, Error, RunCmd, SubstrateCli},
 	frames::benchmarking::cli::BenchmarkCmd,
+	primitives::{core::crypto::Ss58Codec, keyring::AccountKeyring},
 };
 
 #[derive(Debug, clap::Parser)]
@@ -13,6 +15,13 @@ pub struct CliOptions {
 	/// Specify the number of threads to use for mining.
 	#[arg(long, value_name = "COUNT")]
 	pub threads: Option<usize>,
+	/// Account for block mining rewards.
+	#[arg(long)]
+	pub author: Option<String>,
+
+	// Hidden field to store a parsed author.
+	#[arg(long, hide(true))]
+	pub author_id: Option<AccountId>,
 }
 
 #[derive(Debug, clap::Parser)]
@@ -25,6 +34,29 @@ pub struct Cli {
 
 	#[clap(flatten)]
 	pub options: CliOptions,
+}
+
+impl Cli {
+	pub fn finalize(mut self) -> cli::Result<Self> {
+		// RunCmd when subcommand is not specified
+		if self.subcommand.is_none() {
+			let is_dev = self.run.is_dev()?;
+			if let Some(author) = &self.options.author {
+				let author = AccountId::from_string(author)
+					.map_err(|_| Error::Input("Invalid author".into()))?;
+				self.options.author_id = Some(author);
+			} else if is_dev {
+				let keyring = &self.run.get_keyring().unwrap_or(AccountKeyring::Alice);
+				self.options.author_id = Some(keyring.to_account_id());
+			} else {
+				if let Some(_) = &self.run.get_keyring() {
+					return Err(Error::Input("Test keyring cannot be used in non-dev mode".into()));
+				}
+				return Err(Error::Input("No author specified".into()));
+			}
+		}
+		Ok(self)
+	}
 }
 
 impl SubstrateCli for Cli {
@@ -64,6 +96,7 @@ impl SubstrateCli for Cli {
 		})
 	}
 }
+
 #[derive(Debug, clap::Subcommand)]
 #[allow(clippy::large_enum_variant)]
 pub enum Subcommand {

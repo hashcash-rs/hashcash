@@ -59,3 +59,7 @@ pub mod units {
 	/// A second in milliseconds.
 	pub const SECONDS: Moment = 1000;
 }
+
+pub mod constants {
+	pub const SS58_PREFIX: u16 = 60;
+}

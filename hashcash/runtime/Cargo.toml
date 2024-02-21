@@ -18,6 +18,7 @@ frame-support.workspace = true
 frame-system.workspace = true
 frame-system-rpc-runtime-api.workspace = true
 pallet-balances.workspace = true
+pallet-coinbase.workspace = true
 pallet-timestamp.workspace = true
 pallet-transaction-payment.workspace = true
 pallet-transaction-payment-rpc-runtime-api.workspace = true
@@ -55,6 +56,7 @@ std = [
   "frame-system-rpc-runtime-api/std",
   "hashcash-primitives-core/std",
   "pallet-balances/std",
+  "pallet-coinbase/std",
   "pallet-timestamp/std",
   "pallet-transaction-payment/std",
   "pallet-transaction-payment-rpc-runtime-api/std",
@@ -91,6 +93,7 @@ try-runtime = [
   "frame-system/try-runtime",
   "frame-try-runtime/try-runtime",
   "pallet-balances/try-runtime",
+  "pallet-coinbase/try-runtime",
   "pallet-timestamp/try-runtime",
   "pallet-transaction-payment/try-runtime",
   "pallet-wtema/try-runtime",

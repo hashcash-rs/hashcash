@@ -3,7 +3,9 @@
 
 use crate::*;
 
-use hashcash::primitives::core::{units::MiB, AccountId, AccountNonce, Balance, Hash};
+use hashcash::primitives::core::{
+	constants::SS58_PREFIX, units::MiB, AccountId, AccountNonce, Balance, Hash,
+};
 use substrate::{
 	frames::{
 		support::{
@@ -48,7 +50,7 @@ parameter_types! {
 		})
 		.avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
 		.build_or_panic();
-	pub const SS58Prefix: u8 = 60;
+	pub const SS58Prefix: u16 = SS58_PREFIX;
 	pub const Version: RuntimeVersion = VERSION;
 }
 
