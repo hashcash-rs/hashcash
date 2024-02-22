@@ -1,12 +1,15 @@
-// Copyright (c) 2024 Ryuichi Sakamoto
+// Copyright (c) 2024 Hisaishi Joe
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::{cli::CliOptions, preludes::*};
 
 use futures::FutureExt;
-use hashcash::{
-	client::consensus::{inherents::coinbase::InherentDataProvider, MinerParams, RandomXAlgorithm},
-	primitives::core::opaque::Block,
+use hashcash::primitives::core::opaque::Block;
+use p2pool::{
+	client::{
+		block_template,
+		consensus::{start_miner, BlockSubmitter, MinerParams, P2PoolAlgorithm},
+	},
 	runtime::RuntimeApi,
 };
 use parking_lot::Mutex;
@@ -16,7 +19,7 @@ use substrate::{
 		api::Backend,
 		basic_authorship::ProposerFactory,
 		consensus::{
-			pow::{EmptyPreRuntimeProvider, ImportQueueParams, PowBlockImport, PowParams},
+			pow::{ImportQueueParams, PowBlockImport, PowParams},
 			DefaultImportQueue, LongestChain,
 		},
 		executor::WasmExecutor,
@@ -26,8 +29,10 @@ use substrate::{
 		telemetry::{Error as TelemetryError, Telemetry, TelemetryWorker},
 		transaction_pool::{api::OffchainTransactionPoolFactory, BasicPool, FullPool},
 	},
+	codec::Encode,
 	primitives::{
 		io::SubstrateHostFunctions,
+		runtime::{traits::Block as BlockT, ConsensusEngineId},
 		timestamp::InherentDataProvider as TimestampInherentDataProvider,
 	},
 };
@@ -49,13 +54,13 @@ pub type Service = service::PartialComponents<
 			Arc<FullClient>,
 			FullClient,
 			FullSelectChain,
-			RandomXAlgorithm<FullClient>,
+			P2PoolAlgorithm<FullClient>,
 		>,
 		Option<Telemetry>,
 	),
 >;
 
-pub fn new_partial(config: &Configuration, options: &CliOptions) -> Result<Service, Error> {
+pub fn new_partial(config: &Configuration) -> Result<Service, Error> {
 	let telemetry = config
 		.telemetry_endpoints
 		.clone()
@@ -91,7 +96,7 @@ pub fn new_partial(config: &Configuration, options: &CliOptions) -> Result<Servi
 		client.clone(),
 	);
 
-	let algorithm = RandomXAlgorithm::new(client.clone());
+	let algorithm = P2PoolAlgorithm::new(client.clone());
 
 	let pow_block_import = PowBlockImport::new(
 		client.clone(),
@@ -100,19 +105,13 @@ pub fn new_partial(config: &Configuration, options: &CliOptions) -> Result<Servi
 		algorithm.clone(),
 	);
 
-	let author = options.author_id.clone().unwrap();
 	let import_queue = substrate::client::consensus::pow::import_queue(ImportQueueParams {
 		block_import: pow_block_import.clone(),
 		justification_import: None,
 		client: client.clone(),
 		algorithm: algorithm.clone(),
-		create_inherent_data_providers: move |_, ()| {
-			let author = author.clone();
-			async move {
-				let coinbase = InherentDataProvider::new(author.clone());
-				let timestamp = TimestampInherentDataProvider::from_system_time();
-				Ok((coinbase, timestamp))
-			}
+		create_inherent_data_providers: move |_, ()| async move {
+			Ok(TimestampInherentDataProvider::from_system_time())
 		},
 		spawner: &task_manager.spawn_essential_handle(),
 		registry: config.prometheus_registry(),
@@ -130,6 +129,33 @@ pub fn new_partial(config: &Configuration, options: &CliOptions) -> Result<Servi
 	})
 }
 
+struct PreRuntimeProvider {
+	pub _client: Arc<FullClient>,
+	provider: block_template::BlockTemplateProvider<FullClient>,
+}
+
+impl PreRuntimeProvider {
+	fn new(
+		client: Arc<FullClient>,
+		provider: block_template::BlockTemplateProvider<FullClient>,
+	) -> Self {
+		Self { _client: client, provider }
+	}
+}
+
+impl substrate::client::consensus::pow::PreRuntimeProvider<Block> for PreRuntimeProvider {
+	fn pre_runtime(
+		&self,
+		_best_hash: &<Block as BlockT>::Hash,
+	) -> Vec<(ConsensusEngineId, Option<Vec<u8>>)> {
+		let block_template = match self.provider.block_template() {
+			Ok(Some(block_template)) => Some(block_template.encode()),
+			_ => None,
+		};
+		vec![(sp_consensus_pow::POW_ENGINE_ID, block_template)]
+	}
+}
+
 pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManager, Error> {
 	let service::PartialComponents {
 		client,
@@ -140,7 +166,7 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 		select_chain,
 		transaction_pool,
 		other: (block_import, mut telemetry),
-	} = new_partial(&config, &options)?;
+	} = new_partial(&config)?;
 
 	let net_config = FullNetworkConfiguration::new(&config.network);
 
@@ -181,21 +207,13 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 	let role = config.role.clone();
 	let prometheus_registry = config.prometheus_registry().cloned();
 
-	let block_import = Arc::new(Mutex::new(block_import));
 	let rpc_extensions_builder = {
 		let client = client.clone();
 		let pool = transaction_pool.clone();
-		let block_import = block_import.clone();
-		let sync_service = sync_service.clone();
 
 		Box::new(move |deny_unsafe, _| {
-			let deps = crate::rpc::FullDeps {
-				client: client.clone(),
-				pool: pool.clone(),
-				block_import: block_import.clone(),
-				justification_sync_link: sync_service.clone(),
-				deny_unsafe,
-			};
+			let deps =
+				crate::rpc::FullDeps { client: client.clone(), pool: pool.clone(), deny_unsafe };
 			crate::rpc::create_full(deps).map_err(Into::into)
 		})
 	};
@@ -216,7 +234,19 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 	})?;
 
 	if role.is_authority() {
-		let algorithm = RandomXAlgorithm::new(client.clone());
+		let (worker, provider) = block_template::start_block_template_sync(
+			options.mainchain_rpc.clone(),
+			client.clone(),
+		)
+		.map_err(|e| Error::Other(e.to_string()))?;
+		task_manager.spawn_handle().spawn("block-template", None, worker.run());
+
+		let worker =
+			BlockSubmitter::new(options.mainchain_rpc).map_err(|e| Error::Other(e.to_string()))?;
+		let submitter = worker.tx.clone();
+		task_manager.spawn_handle().spawn("block-submitter", None, worker.run());
+
+		let algorithm = P2PoolAlgorithm::new(client.clone());
 
 		let proposer_factory = ProposerFactory::new(
 			task_manager.spawn_handle(),
@@ -226,8 +256,9 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 			telemetry.as_ref().map(|x| x.handle()),
 		);
 
+		let block_import = Arc::new(Mutex::new(block_import));
 		let (worker, worker_task) =
-			hashcash::client::consensus::pow::start_mining_worker(PowParams {
+			substrate::client::consensus::pow::start_mining_worker(PowParams {
 				client: client.clone(),
 				select_chain,
 				block_import,
@@ -235,15 +266,9 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 				proposer_factory,
 				sync_oracle: sync_service.clone(),
 				justification_sync_link: sync_service.clone(),
-				pre_runtime_provider: EmptyPreRuntimeProvider::<Block>::new(),
-				create_inherent_data_providers: move |_, ()| {
-					let author = options.author_id.clone().unwrap();
-					async move {
-						let coinbase = InherentDataProvider::new(author.clone());
-						let timestamp = TimestampInherentDataProvider::from_system_time();
-						coinbase.print_author();
-						Ok((coinbase, timestamp))
-					}
+				pre_runtime_provider: PreRuntimeProvider::new(client.clone(), provider),
+				create_inherent_data_providers: move |_, ()| async move {
+					Ok(TimestampInherentDataProvider::from_system_time())
 				},
 				timeout: Duration::new(10, 0),
 				build_time: Duration::new(10, 0),
@@ -253,10 +278,11 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 			.spawn_handle()
 			.spawn_blocking("pow", Some("block-authoring"), worker_task);
 
-		hashcash::client::consensus::start_miner(MinerParams {
+		start_miner(MinerParams {
 			client,
 			handle: Arc::new(worker),
 			threads_count: options.threads.unwrap_or(1),
+			submitter,
 		});
 	}
 

@@ -94,23 +94,27 @@ where
 		self.version.fetch_add(1, Ordering::SeqCst);
 	}
 
-	pub(crate) fn new(algorithm: Algorithm, block_import: I, justification_sync_link: L) -> Self {
+	pub fn new(
+		algorithm: Algorithm,
+		block_import: Arc<Mutex<I>>,
+		justification_sync_link: L,
+	) -> Self {
 		Self {
 			version: Arc::new(AtomicUsize::new(0)),
 			algorithm: Arc::new(algorithm),
 			justification_sync_link: Arc::new(justification_sync_link),
 			build: Arc::new(RwLock::new(None)),
-			block_import: Arc::new(Mutex::new(block_import)),
+			block_import,
 		}
 	}
 
-	pub(crate) fn on_major_syncing(&self) {
+	pub fn on_major_syncing(&self) {
 		let mut build = self.build.write();
 		*build = None;
 		self.increment_version();
 	}
 
-	pub(crate) fn on_build(&self, value: MiningBuild<Block, Algorithm, Proof>) {
+	pub fn on_build(&self, value: MiningBuild<Block, Algorithm, Proof>) {
 		let mut build = self.build.write();
 		*build = Some(value);
 		self.increment_version();

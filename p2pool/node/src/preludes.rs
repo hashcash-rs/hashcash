@@ -1,17 +1,18 @@
-// Copyright (c) 2024 Ryuichi Sakamoto
+// Copyright (c) 2024 Hisaishi Joe
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 pub mod hashcash {
-	pub mod client {
-		pub mod consensus {
-			pub use hashcash_client_consensus::*;
-			pub use hashcash_client_consensus_rpc as rpc;
-		}
-	}
 	pub mod primitives {
 		pub use hashcash_primitives_core as core;
 	}
-	pub use hashcash_runtime as runtime;
+}
+
+pub mod p2pool {
+	pub use p2pool_runtime as runtime;
+	pub mod client {
+		pub use p2pool_client_block_template as block_template;
+		pub use p2pool_client_consensus as consensus;
+	}
 }
 
 pub mod substrate {
@@ -21,7 +22,9 @@ pub mod substrate {
 		pub use sc_client_api as api;
 		pub mod consensus {
 			pub use sc_consensus::*;
-			pub use sc_consensus_pow as pow;
+			pub mod pow {
+				pub use sc_consensus_pow::*;
+			}
 		}
 		pub use sc_executor as executor;
 		pub use sc_network as network;
@@ -36,6 +39,11 @@ pub mod substrate {
 			pub use sc_transaction_pool_api as api;
 		}
 	}
+
+	pub mod codec {
+		pub use parity_scale_codec::*;
+	}
+
 	pub mod frames {
 		pub mod benchmarking {
 			pub use frame_benchmarking_cli as cli;
@@ -44,23 +52,13 @@ pub mod substrate {
 			pub use substrate_frame_rpc_system as rpc;
 		}
 	}
-	pub mod pallets {
-		pub mod transaction_payment {
-			pub use pallet_transaction_payment_rpc as rpc;
-		}
-	}
+
 	pub mod primitives {
 		pub use sp_api as api;
 		pub use sp_block_builder as block_builder;
 		pub use sp_blockchain as blockchain;
-		pub use sp_core as core;
-		pub use sp_inherents as inherents;
 		pub use sp_io as io;
-		pub use sp_keyring as keyring;
 		pub use sp_runtime as runtime;
 		pub use sp_timestamp as timestamp;
-		pub mod consensus {
-			pub use sp_consensus_pow as pow;
-		}
 	}
 }

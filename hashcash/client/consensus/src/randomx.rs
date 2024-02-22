@@ -40,7 +40,7 @@ impl From<RandomXError> for Error {
 	}
 }
 
-pub(crate) fn get_flags() -> RandomXFlags {
+pub fn get_flags() -> RandomXFlags {
 	let use_large_pages = *LARGE_PAGES.get_or_init(|| {
 		match RandomXCache::new(RandomXFlags::default() | RandomXFlags::LargePages) {
 			Ok(_) => true,
@@ -56,7 +56,7 @@ pub(crate) fn get_flags() -> RandomXFlags {
 	}
 }
 
-pub(crate) fn get_or_init_cache(seed_hash: &Hash) -> Result<Arc<RandomXCache>, Error> {
+pub fn get_or_init_cache(seed_hash: &Hash) -> Result<Arc<RandomXCache>, Error> {
 	let shared_caches = CACHES.get_or_init(|| Arc::new(Mutex::new(LruMap::new(ByLength::new(3)))));
 	let mut shared_caches = shared_caches.lock();
 
@@ -72,14 +72,14 @@ pub(crate) fn get_or_init_cache(seed_hash: &Hash) -> Result<Arc<RandomXCache>, E
 	}
 }
 
-pub(crate) fn get_dataset(seed_hash: &Hash) -> Result<Option<Arc<RandomXDataset>>, Error> {
+pub fn get_dataset(seed_hash: &Hash) -> Result<Option<Arc<RandomXDataset>>, Error> {
 	let shared_datasets =
 		DATASETS.get_or_init(|| Arc::new(Mutex::new(LruMap::new(ByLength::new(2)))));
 
 	Ok(shared_datasets.lock().get(seed_hash).cloned())
 }
 
-pub(crate) fn get_or_init_dataset(seed_hash: &Hash) -> Result<Arc<RandomXDataset>, Error> {
+pub fn get_or_init_dataset(seed_hash: &Hash) -> Result<Arc<RandomXDataset>, Error> {
 	let shared_datasets =
 		DATASETS.get_or_init(|| Arc::new(Mutex::new(LruMap::new(ByLength::new(2)))));
 	let mut shared_datasets = shared_datasets.lock();

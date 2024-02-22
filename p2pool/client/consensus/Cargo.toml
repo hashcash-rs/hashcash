@@ -1,6 +1,6 @@
 [package]
-name = "hashcash-client-consensus"
-authors.workspace = true
+name = "p2pool-client-consensus"
+authors = ["Hisaishi Joe <hisaishi@tuta.io>"]
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
@@ -9,21 +9,22 @@ repository.workspace = true
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-async-trait.workspace = true
 futures.workspace = true
-hashcash-primitives = { workspace = true, features = ["std"] }
-hashcash-randomx.workspace = true
+jsonrpsee = { workspace = true, features = ["http-client"] }
 log.workspace = true
 parity-scale-codec = { workspace = true, features = ["std"] }
 parking_lot.workspace = true
 rand.workspace = true
-schnellru.workspace = true
+thiserror.workspace = true
+
 sc-client-api.workspace = true
-sc-consensus.workspace = true
 sc-consensus-pow.workspace = true
 sp-api = { workspace = true, features = ["std"] }
-sp-consensus.workspace = true
-sp-consensus-pow = { workspace = true, features = ["std"] }
 sp-core = { workspace = true, features = ["std"] }
-sp-inherents = { workspace = true, features = ["std"] }
+sp-consensus-pow.workspace = true
 sp-runtime = { workspace = true, features = ["std"] }
+
+hashcash-client-consensus.workspace = true
+hashcash-client-consensus-rpc.workspace = true
+hashcash-primitives-core = { workspace = true, features = ["std"] }
+hashcash-randomx.workspace = true

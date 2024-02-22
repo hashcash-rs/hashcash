@@ -41,13 +41,14 @@
 
 mod worker;
 
-pub use crate::worker::{MiningBuild, MiningHandle, MiningMetadata, Version};
-
-use crate::worker::UntilImportedOrTimeout;
+pub use crate::worker::{
+	MiningBuild, MiningHandle, MiningMetadata, UntilImportedOrTimeout, Version,
+};
 use futures::{Future, StreamExt};
 use log::*;
 use parity_scale_codec::{Decode, Encode};
-use sc_client_api::{self, backend::AuxStore, BlockOf, BlockchainEvents};
+use parking_lot::Mutex;
+use sc_client_api::{backend::AuxStore, BlockOf, BlockchainEvents};
 use sc_consensus::{
 	BasicQueue, BlockCheckParams, BlockImport, BlockImportParams, BoxJustificationImport,
 	ForkChoiceStrategy, ImportResult, Verifier,
@@ -505,7 +506,7 @@ pub struct PowParams<C, SC, I, A, PF, SO, L, CIDP, PP> {
 	/// A select chain implementation to select the best block.
 	pub select_chain: SC,
 	/// The block import.
-	pub block_import: I,
+	pub block_import: Arc<Mutex<I>>,
 	/// PoW algorithm.
 	pub algorithm: A,
 	/// The proposer factory to build proposer instances.
@@ -641,7 +642,7 @@ where
 						target: LOG_TARGET,
 						"Unable to propose new block for authoring. \
 						 Creating inherent data failed: {}",
-						e,
+						 e,
 					);
 					continue
 				},
