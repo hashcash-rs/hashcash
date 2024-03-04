@@ -706,7 +706,7 @@ where
 }
 
 /// Find PoW pre-runtime.
-fn find_pre_digest<B: BlockT>(header: &B::Header) -> Result<Option<Vec<u8>>, Error<B>> {
+pub fn find_pre_digest<B: BlockT>(header: &B::Header) -> Result<Option<Vec<u8>>, Error<B>> {
 	let mut pre_digest: Option<_> = None;
 	for log in header.digest().logs() {
 		trace!(target: LOG_TARGET, "Checking log {:?}, looking for pre runtime digest", log);
@@ -724,7 +724,7 @@ fn find_pre_digest<B: BlockT>(header: &B::Header) -> Result<Option<Vec<u8>>, Err
 }
 
 /// Fetch PoW seal.
-fn fetch_seal<B: BlockT>(digest: Option<&DigestItem>, hash: B::Hash) -> Result<Vec<u8>, Error<B>> {
+pub fn fetch_seal<B: BlockT>(digest: Option<&DigestItem>, hash: B::Hash) -> Result<Vec<u8>, Error<B>> {
 	match digest {
 		Some(DigestItem::Seal(id, seal)) =>
 			if id == &POW_ENGINE_ID {
