@@ -3,7 +3,7 @@
 
 use crate::preludes::*;
 
-use hashcash::client::consensus::{self, rpc::BlockTemplate, Seal};
+use hashcash::client::consensus::{randomx, rpc::BlockTemplate, Seal};
 use sp_runtime::{testing::DigestItem, SaturatedConversion};
 use std::sync::Arc;
 use substrate::{
@@ -89,7 +89,7 @@ where
 
 			let seal = Seal::decode(&mut &inner_seal[..])
 				.map_err(|e| ConsensusError::ClientImport(e.to_string()))?;
-			let work = consensus::calculate_hash(
+			let work = randomx::calculate_hash(
 				&block_template.seed_hash,
 				(block_template.block.hash(), seal.nonce).encode().as_slice(),
 			)
@@ -100,11 +100,8 @@ where
 				.checked_div(U256::from_big_endian(work.as_bytes()))
 				.ok_or(ConsensusError::ClientImport("Invalid RandomX hash".to_string()))?
 				.saturated_into();
-			let key: Vec<u8> = P2POOL_AUX_PREFIX
-				.iter()
-				.chain(block.post_hash().as_ref())
-				.copied()
-				.collect();
+			let key: Vec<u8> =
+				P2POOL_AUX_PREFIX.iter().chain(block.post_hash().as_ref()).copied().collect();
 			let _ = self
 				.client
 				.insert_aux(&[(&key[..], &share.encode()[..])], &[])

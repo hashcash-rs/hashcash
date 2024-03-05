@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 mod algorithm;
+mod import;
 mod miner;
 mod preludes;
 mod submit;
