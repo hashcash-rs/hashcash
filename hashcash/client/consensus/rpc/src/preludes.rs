@@ -6,12 +6,12 @@ pub mod hashcash {
 		pub use hashcash_client_consensus as consensus;
 	}
 	pub mod primitives {
+		pub use hashcash_primitives::*;
 		pub use hashcash_primitives_core as core;
 	}
 }
 pub mod substrate {
 	pub mod client {
-		pub use sc_client_api as api;
 		pub mod consensus {
 			pub use sc_consensus::*;
 			pub use sc_consensus_pow as pow;
@@ -25,6 +25,7 @@ pub mod substrate {
 			pub use sp_consensus_pow as pow;
 		}
 		pub use sp_core as core;
+		pub use sp_inherents as inherents;
 		pub use sp_runtime as runtime;
 	}
 	pub use parity_scale_codec as codec;

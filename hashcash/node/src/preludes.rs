@@ -60,6 +60,7 @@ pub mod substrate {
 		pub use sp_runtime as runtime;
 		pub use sp_timestamp as timestamp;
 		pub mod consensus {
+			pub use sp_consensus::*;
 			pub use sp_consensus_pow as pow;
 		}
 	}

@@ -42,6 +42,7 @@ sc-transaction-pool-api.workspace = true
 sp-api = { workspace = true, features = ["std"] }
 sp-block-builder = { workspace = true, features = ["std"] }
 sp-blockchain.workspace = true
+sp-consensus.workspace = true
 sp-consensus-pow = { workspace = true, features = ["std"] }
 sp-core.workspace = true
 sp-inherents = { workspace = true, features = ["std"] }

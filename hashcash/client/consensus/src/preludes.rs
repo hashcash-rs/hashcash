@@ -19,7 +19,6 @@ pub mod substrate {
 	pub mod primitives {
 		pub use sp_api as api;
 		pub mod consensus {
-			pub use sp_consensus::*;
 			pub use sp_consensus_pow as pow;
 		}
 		pub use sp_core as core;

@@ -9,19 +9,19 @@ use error::Error;
 
 use hashcash::{
 	client::consensus,
-	primitives::core::{opaque::Block, Difficulty, Hash},
+	primitives::{
+		coinbase,
+		core::{opaque::Block, AccountId, Difficulty, Hash},
+	},
 };
 use jsonrpsee::{core::async_trait, proc_macros::rpc};
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use substrate::{
-	client::{
-		api::backend::AuxStore,
-		consensus::{
-			pow::{PowIntermediate, INTERMEDIATE_KEY},
-			BlockImport, BlockImportParams, JustificationSyncLink, StateAction, StorageChanges,
-		},
+	client::consensus::{
+		pow::{PowIntermediate, PreRuntimeProvider, INTERMEDIATE_KEY},
+		BlockImport, BlockImportParams, JustificationSyncLink, StateAction, StorageChanges,
 	},
 	codec::{Decode, Encode},
 	primitives::{
@@ -29,11 +29,12 @@ use substrate::{
 		blockchain::HeaderBackend,
 		consensus::{
 			pow::{DifficultyApi, POW_ENGINE_ID},
-			BlockOrigin,
+			BlockOrigin, Environment, Proposer, SelectChain,
 		},
-		core::{Bytes, H256},
+		core::{crypto::Ss58Codec, Bytes, H256},
+		inherents::{CreateInherentDataProviders, InherentDataProvider},
 		runtime::{
-			generic::BlockId,
+			generic::{BlockId, Digest},
 			traits::{Block as BlockT, Header},
 			DigestItem,
 		},
@@ -56,49 +57,110 @@ pub struct BlockSubmitParams {
 #[rpc(client, server)]
 pub trait MinerApi {
 	#[method(name = "miner_getBlockTemplate")]
-	fn block_template(&self) -> Result<Option<BlockTemplate>, Error>;
+	fn block_template(&self, shares: Vec<(String, Difficulty)>) -> Result<BlockTemplate, Error>;
 
 	#[method(name = "miner_submitBlock")]
 	fn submit_block(&self, block_submit_params: Bytes) -> Result<Hash, Error>;
 }
 
-pub struct Miner<C, I, L> {
+pub struct Miner<C, CIDP, I, L, PF, PP, S> {
 	block_import: Arc<Mutex<I>>,
+	build_time: Duration,
 	client: Arc<C>,
+	create_inherent_data_providers: CIDP,
 	justification_sync_link: Arc<L>,
+	pre_runtime_provider: PP,
+	proposer_factory: Arc<Mutex<PF>>,
+	select_chain: S,
 }
 
-impl<C, I, L> Miner<C, I, L>
+impl<C, CIDP, I, L, PF, PP, S> Miner<C, CIDP, I, L, PF, PP, S>
 where
-	C: ProvideRuntimeApi<Block> + HeaderBackend<Block> + CallApiAt<Block> + AuxStore,
+	C: ProvideRuntimeApi<Block> + HeaderBackend<Block> + CallApiAt<Block>,
 	C::Api: DifficultyApi<Block, Difficulty> + ApiExt<Block>,
+	CIDP: CreateInherentDataProviders<Block, ()>,
 	I: BlockImport<Block>,
 	L: JustificationSyncLink<Block>,
+	PF: Environment<Block>,
+	PF::Error: std::fmt::Debug,
+	PF::Proposer: Proposer<Block>,
+	PP: PreRuntimeProvider<Block>,
+	S: SelectChain<Block>,
 {
 	pub fn new(
-		client: Arc<C>,
 		block_import: Arc<Mutex<I>>,
+		build_time: Duration,
+		client: Arc<C>,
+		create_inherent_data_providers: CIDP,
 		justification_sync_link: Arc<L>,
+		pre_runtime_provider: PP,
+		proposer_factory: Arc<Mutex<PF>>,
+		select_chain: S,
 	) -> Self {
-		Self { client, block_import, justification_sync_link }
+		Self {
+			block_import,
+			build_time,
+			client,
+			create_inherent_data_providers,
+			justification_sync_link,
+			pre_runtime_provider,
+			proposer_factory,
+			select_chain,
+		}
 	}
 
-	pub fn block_template_inner(&self) -> Result<Option<BlockTemplate>, Error> {
-		if let Some(value) =
-			self.client.as_ref().get_aux(consensus::STORAGE_KEY).map_err(Error::AuxStore)?
-		{
-			let block = Block::decode(&mut &value[..]).map_err(Error::Codec)?;
+	pub async fn block_template_inner(
+		&self,
+		shares: Vec<(String, u128)>,
+	) -> Result<BlockTemplate, Error> {
+		let best_header = self.select_chain.best_chain().await.map_err(Error::Consensus)?;
+		let best_hash = best_header.hash();
 
-			let parent_hash = *block.header().parent_hash();
-			let seed_hash = consensus::seed_hash(&self.client, &BlockId::Hash(parent_hash))
-				.map_err(Error::ConsensusPow)?;
-			let difficulty =
-				self.client.runtime_api().difficulty(parent_hash).map_err(Error::RuntimeApi)?;
+		let inherent_data_providers = self
+			.create_inherent_data_providers
+			.create_inherent_data_providers(best_hash, ())
+			.await
+			.map_err(Error::Other)?;
+		let mut inherent_data =
+			inherent_data_providers.create_inherent_data().await.map_err(Error::Inherents)?;
 
-			Ok(Some(BlockTemplate { block, difficulty, seed_hash }))
-		} else {
-			Ok(None)
+		let mut rewards = Vec::<(AccountId, Difficulty)>::new();
+		for (acc, weight) in shares {
+			if let Ok(acc) = AccountId::from_string(&acc) {
+				rewards.push((acc, weight));
+			}
 		}
+		let _ = inherent_data.put_data(coinbase::INHERENT_IDENTIFIER, &rewards);
+
+		let mut inherent_digest = Digest::default();
+		for (id, data) in self.pre_runtime_provider.pre_runtime(&best_hash) {
+			if let Some(data) = data {
+				inherent_digest.push(DigestItem::PreRuntime(id, data));
+			}
+		}
+
+		let proposer = self.proposer_factory.lock().init(&best_header).await.map_err(|e| {
+			Error::Proposer(format!(
+				"Unable to propose new block for authoring. Creating proposer failed: {:?}",
+				e
+			))
+		})?;
+		let proposal = proposer
+			.propose(inherent_data, inherent_digest, self.build_time, None)
+			.await
+			.map_err(|e| {
+				Error::Proposer(format!(
+					"Unable to propose new block for authoring. Creating proposal failed: {}",
+					e,
+				))
+			})?;
+		let parent_hash = proposal.block.header().parent_hash();
+		let seed_hash = consensus::seed_hash(&self.client, &BlockId::Hash(*parent_hash))
+			.map_err(Error::ConsensusPow)?;
+		let difficulty =
+			self.client.runtime_api().difficulty(*parent_hash).map_err(Error::RuntimeApi)?;
+
+		Ok(BlockTemplate { block: proposal.block, difficulty, seed_hash })
 	}
 
 	pub async fn submit_block_inner(&self, block_submit_params: Bytes) -> Result<H256, Error> {
@@ -142,15 +204,21 @@ where
 }
 
 #[async_trait]
-impl<C, I, L> MinerApiServer for Miner<C, I, L>
+impl<C, CIDP, I, L, PF, PP, S> MinerApiServer for Miner<C, CIDP, I, L, PF, PP, S>
 where
-	C: ProvideRuntimeApi<Block> + HeaderBackend<Block> + CallApiAt<Block> + AuxStore + 'static,
+	C: ProvideRuntimeApi<Block> + HeaderBackend<Block> + CallApiAt<Block> + 'static,
 	C::Api: DifficultyApi<Block, Difficulty> + ApiExt<Block>,
-	I: BlockImport<Block> + std::marker::Send + std::marker::Sync + 'static,
+	CIDP: CreateInherentDataProviders<Block, ()> + 'static,
+	I: BlockImport<Block> + Send + Sync + 'static,
 	L: JustificationSyncLink<Block> + 'static,
+	PF: Environment<Block> + Send + Sync + 'static,
+	PF::Error: std::fmt::Debug,
+	PF::Proposer: Proposer<Block>,
+	PP: PreRuntimeProvider<Block> + Send + Sync + 'static,
+	S: SelectChain<Block> + 'static,
 {
-	fn block_template(&self) -> Result<Option<BlockTemplate>, Error> {
-		self.block_template_inner()
+	fn block_template(&self, shares: Vec<(String, u128)>) -> Result<BlockTemplate, Error> {
+		futures::executor::block_on(self.block_template_inner(shares))
 	}
 
 	fn submit_block(&self, block_submit_params: Bytes) -> Result<H256, Error> {

@@ -182,6 +182,17 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 		let pool = transaction_pool.clone();
 		let block_import = block_import.clone();
 		let sync_service = sync_service.clone();
+		let select_chain = select_chain.clone();
+
+		let proposer_factory = Arc::new(Mutex::new(ProposerFactory::new(
+			task_manager.spawn_handle(),
+			client.clone(),
+			transaction_pool.clone(),
+			prometheus_registry.as_ref(),
+			telemetry.as_ref().map(|x| x.handle()),
+		)));
+
+		let proposer_factory = proposer_factory.clone();
 
 		Box::new(move |deny_unsafe, _| {
 			let deps = crate::rpc::FullDeps {
@@ -190,6 +201,13 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 				block_import: block_import.clone(),
 				justification_sync_link: sync_service.clone(),
 				deny_unsafe,
+				build_time: Duration::new(10, 0),
+				create_inherent_data_providers: move |_, ()| async move {
+					Ok(TimestampInherentDataProvider::from_system_time())
+				},
+				pre_runtime_provider: EmptyPreRuntimeProvider::<Block>::new(),
+				proposer_factory: proposer_factory.clone(),
+				select_chain: select_chain.clone(),
 			};
 			crate::rpc::create_full(deps).map_err(Into::into)
 		})
@@ -223,7 +241,7 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 
 		let author = options.author_id.clone().unwrap();
 		let (worker, worker_task) =
-			hashcash::client::consensus::pow::start_mining_worker(PowParams {
+			substrate::client::consensus::pow::start_mining_worker(PowParams {
 				client: client.clone(),
 				select_chain,
 				block_import,
