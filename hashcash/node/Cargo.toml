@@ -54,7 +54,7 @@ substrate-frame-rpc-system.workspace = true
 
 hashcash-client-consensus.workspace = true
 hashcash-client-consensus-rpc.workspace = true
-hashcash-primitives-core = { workspace = true, features = ["runtime", "std"] }
+hashcash-primitives-core = { workspace = true, features = ["std"] }
 hashcash-runtime = { workspace = true, features = ["std"] }
 
 [build-dependencies]

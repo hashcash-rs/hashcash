@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Ryuichi Sakamoto
+// Copyright (c) Ryuichi Sakamoto
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 pub const LOG_TARGET: &str = "consensus";

@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Ryuichi Sakamoto
+// Copyright (c) Ryuichi Sakamoto
 // SPDX-License-Identifier: Apache-2.0
 
 #[cfg(feature = "std")]

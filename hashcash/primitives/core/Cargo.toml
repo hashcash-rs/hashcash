@@ -19,7 +19,6 @@ sp-runtime.workspace = true
 
 [features]
 default = ["std"]
-runtime = []
 std = [
   "sp-core/std",
   "sp-runtime/std",

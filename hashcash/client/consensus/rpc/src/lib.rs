@@ -1,17 +1,17 @@
-// Copyright (c) 2024 Hisaishi Joe
+// Copyright (c) Hisaishi Joe
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 mod preludes;
 use preludes::*;
 
+mod error;
+use error::Error;
+
 use hashcash::{
 	client::consensus,
 	primitives::core::{opaque::Block, Difficulty, Hash},
 };
-use jsonrpsee::{
-	core::{async_trait, RpcResult},
-	proc_macros::rpc,
-};
+use jsonrpsee::{core::async_trait, proc_macros::rpc};
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -25,7 +25,7 @@ use substrate::{
 	},
 	codec::{Decode, Encode},
 	primitives::{
-		api::{ApiError, ApiExt, CallApiAt, ProvideRuntimeApi},
+		api::{ApiExt, CallApiAt, ProvideRuntimeApi},
 		blockchain::HeaderBackend,
 		consensus::{
 			pow::{DifficultyApi, POW_ENGINE_ID},
@@ -39,20 +39,6 @@ use substrate::{
 		},
 	},
 };
-
-#[derive(Debug, thiserror::Error)]
-pub enum MinerError {
-	#[error(transparent)]
-	AuxStore(substrate::primitives::blockchain::Error),
-	#[error(transparent)]
-	Codec(substrate::codec::Error),
-	#[error(transparent)]
-	ConsensusPow(substrate::client::consensus::pow::Error<Block>),
-	#[error(transparent)]
-	RuntimeApi(#[from] ApiError),
-	#[error("{0}")]
-	StorageChanges(String),
-}
 
 #[derive(Clone, Encode, Decode, Eq, PartialEq, Serialize, Deserialize)]
 pub struct BlockTemplate {
@@ -70,10 +56,10 @@ pub struct BlockSubmitParams {
 #[rpc(client, server)]
 pub trait MinerApi {
 	#[method(name = "miner_getBlockTemplate")]
-	fn block_template(&self) -> RpcResult<Option<BlockTemplate>>;
+	fn block_template(&self) -> Result<Option<BlockTemplate>, Error>;
 
 	#[method(name = "miner_submitBlock")]
-	fn submit_block(&self, block_submit_params: Bytes) -> RpcResult<Hash>;
+	fn submit_block(&self, block_submit_params: Bytes) -> Result<Hash, Error>;
 }
 
 pub struct Miner<C, I, L> {
@@ -97,23 +83,17 @@ where
 		Self { client, block_import, justification_sync_link }
 	}
 
-	pub fn block_template_inner(&self) -> Result<Option<BlockTemplate>, MinerError> {
-		if let Some(value) = self
-			.client
-			.as_ref()
-			.get_aux(consensus::STORAGE_KEY)
-			.map_err(MinerError::AuxStore)?
+	pub fn block_template_inner(&self) -> Result<Option<BlockTemplate>, Error> {
+		if let Some(value) =
+			self.client.as_ref().get_aux(consensus::STORAGE_KEY).map_err(Error::AuxStore)?
 		{
-			let block = Block::decode(&mut &value[..]).map_err(MinerError::Codec)?;
+			let block = Block::decode(&mut &value[..]).map_err(Error::Codec)?;
 
 			let parent_hash = *block.header().parent_hash();
 			let seed_hash = consensus::seed_hash(&self.client, &BlockId::Hash(parent_hash))
-				.map_err(MinerError::ConsensusPow)?;
-			let difficulty = self
-				.client
-				.runtime_api()
-				.difficulty(parent_hash)
-				.map_err(MinerError::RuntimeApi)?;
+				.map_err(Error::ConsensusPow)?;
+			let difficulty =
+				self.client.runtime_api().difficulty(parent_hash).map_err(Error::RuntimeApi)?;
 
 			Ok(Some(BlockTemplate { block, difficulty, seed_hash }))
 		} else {
@@ -121,9 +101,9 @@ where
 		}
 	}
 
-	pub async fn submit_block_inner(&self, block_submit_params: Bytes) -> Result<H256, MinerError> {
+	pub async fn submit_block_inner(&self, block_submit_params: Bytes) -> Result<H256, Error> {
 		let block_submit_params =
-			BlockSubmitParams::decode(&mut &block_submit_params[..]).map_err(MinerError::Codec)?;
+			BlockSubmitParams::decode(&mut &block_submit_params[..]).map_err(Error::Codec)?;
 
 		let (header, body) = block_submit_params.block.deconstruct();
 		let mut import_block =
@@ -133,20 +113,17 @@ where
 		import_block.body = Some(body);
 
 		let parent_hash = header.parent_hash();
-		let state = self.client.state_at(*parent_hash).map_err(MinerError::RuntimeApi)?;
+		let state = self.client.state_at(*parent_hash).map_err(Error::RuntimeApi)?;
 		let storage_changes = self
 			.client
 			.runtime_api()
 			.into_storage_changes(&state, *parent_hash)
-			.map_err(MinerError::StorageChanges)?;
+			.map_err(Error::StorageChanges)?;
 
 		import_block.state_action =
 			StateAction::ApplyChanges(StorageChanges::Changes(storage_changes));
-		let difficulty = self
-			.client
-			.runtime_api()
-			.difficulty(*parent_hash)
-			.map_err(MinerError::RuntimeApi)?;
+		let difficulty =
+			self.client.runtime_api().difficulty(*parent_hash).map_err(Error::RuntimeApi)?;
 
 		let intermediate = PowIntermediate { difficulty: Some(difficulty) };
 		import_block.insert_intermediate(INTERMEDIATE_KEY, intermediate);
@@ -172,13 +149,11 @@ where
 	I: BlockImport<Block> + std::marker::Send + std::marker::Sync + 'static,
 	L: JustificationSyncLink<Block> + 'static,
 {
-	fn block_template(&self) -> RpcResult<Option<BlockTemplate>> {
+	fn block_template(&self) -> Result<Option<BlockTemplate>, Error> {
 		self.block_template_inner()
-			.map_err(|e| jsonrpsee::core::Error::Custom(e.to_string()))
 	}
 
-	fn submit_block(&self, block_submit_params: Bytes) -> RpcResult<H256> {
+	fn submit_block(&self, block_submit_params: Bytes) -> Result<H256, Error> {
 		futures::executor::block_on(self.submit_block_inner(block_submit_params))
-			.map_err(|e| jsonrpsee::core::Error::Custom(e.to_string()))
 	}
 }

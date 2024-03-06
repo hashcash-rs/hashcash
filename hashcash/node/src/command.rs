@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Ryuichi Sakamoto
+// Copyright (c) Ryuichi Sakamoto
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::preludes::*;
@@ -15,7 +15,7 @@ use substrate::{
 		service::PartialComponents,
 	},
 	frames::benchmarking::cli::{BenchmarkCmd, ExtrinsicFactory, SUBSTRATE_REFERENCE_HARDWARE},
-	primitives::keyring::Sr25519Keyring,
+	primitives::{keyring::Sr25519Keyring, runtime::traits::HashingFor},
 };
 
 pub fn run() -> Result<()> {
@@ -38,7 +38,7 @@ pub fn run() -> Result<()> {
 							)
 						}
 
-						cmd.run::<Block, ()>(config)
+						cmd.run::<HashingFor<Block>, ()>(config)
 					},
 					BenchmarkCmd::Block(cmd) => {
 						let PartialComponents { client, .. } =

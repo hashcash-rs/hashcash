@@ -49,7 +49,7 @@ sp-timestamp = { workspace = true, features = ["std"] }
 substrate-frame-rpc-system.workspace = true
 
 hashcash-client-consensus.workspace = true
-hashcash-primitives-core = { workspace = true, features = ["runtime", "std"] }
+hashcash-primitives-core = { workspace = true, features = ["std"] }
 p2pool-client-block-template.workspace = true
 p2pool-client-consensus.workspace = true
 p2pool-runtime = { workspace = true, features = ["std"] }

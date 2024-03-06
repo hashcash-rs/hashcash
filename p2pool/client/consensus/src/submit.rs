@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Hisaishi Joe
+// Copyright (c) Hisaishi Joe
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::preludes::*;
@@ -14,7 +14,7 @@ use substrate::primitives::core::{Bytes, H256};
 #[derive(Debug, thiserror::Error)]
 pub enum BlockSubmitterError {
 	#[error(transparent)]
-	HttpClient(jsonrpsee::core::Error),
+	HttpClient(jsonrpsee::core::client::Error),
 }
 
 pub struct BlockSubmitter {

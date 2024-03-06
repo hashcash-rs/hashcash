@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Ryuichi Sakamoto
+// Copyright (c) Ryuichi Sakamoto
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::*;
@@ -19,7 +19,6 @@ impl substrate::pallets::balances::Config for Runtime {
 	type ExistentialDeposit = ExistentialDeposit;
 	type FreezeIdentifier = RuntimeFreezeReason;
 	type MaxFreezes = ConstU32<8>;
-	type MaxHolds = ConstU32<1>;
 	type MaxLocks = ConstU32<50>;
 	type MaxReserves = ConstU32<50>;
 	type ReserveIdentifier = [u8; 8];

@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Ryuichi Sakamoto
+// Copyright (c) Ryuichi Sakamoto
 // SPDX-License-Identifier: Apache-2.0
 
 #![allow(missing_docs)]
@@ -38,9 +38,6 @@ pub mod opaque {
 	pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
 	pub type UncheckedExtrinsic = OpaqueExtrinsic;
 }
-
-#[cfg(not(feature = "runtime"))]
-pub use opaque::*;
 
 #[allow(non_upper_case_globals)]
 pub mod units {

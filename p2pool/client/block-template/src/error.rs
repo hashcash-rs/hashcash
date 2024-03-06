@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Hisaishi Joe
+// Copyright (c) Hisaishi Joe
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::preludes::*;
@@ -10,7 +10,7 @@ pub enum BlockTemplateError {
 	#[error(transparent)]
 	Codec(codec::Error),
 	#[error(transparent)]
-	HttpClient(jsonrpsee::core::Error),
+	HttpClient(jsonrpsee::core::client::Error),
 	#[error(transparent)]
 	AuxStore(substrate::primitives::blockchain::Error),
 }
