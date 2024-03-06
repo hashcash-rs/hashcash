@@ -5,7 +5,7 @@ use crate::*;
 
 use hashcash::{
 	pallets::coinbase::{BalanceOf, EmissionCurve},
-	primitives::core::{units::DOLLARS, Balance, BlockNumber, Difficulty},
+	primitives::core::{units::DOLLARS, BlockNumber},
 };
 
 const TARGET_ISSUANCE: Balance = 1_000_000_000 * DOLLARS;

@@ -3,7 +3,7 @@
 
 use crate::*;
 
-use hashcash::primitives::core::{units::SECONDS, Difficulty, Moment};
+use hashcash::primitives::core::units::SECONDS;
 
 parameter_types! {
 	/// Smoothing factor for difficulty adjustment.

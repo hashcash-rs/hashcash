@@ -41,13 +41,13 @@ where
 {
 	let parent_number = client
 		.block_number_from_id(parent)
-		.map_err(|e| Error::Client(e))?
+		.map_err(Error::Client)?
 		.ok_or(Error::Environment(format!("Block number not found: {:?}", parent)))?;
 
 	let seed_height = seed_height(parent_number);
 
 	client
 		.hash(seed_height)
-		.map_err(|e| Error::Client(e))?
+		.map_err(Error::Client)?
 		.ok_or(Error::Environment(format!("Block hash not found: {:?}", seed_height)))
 }

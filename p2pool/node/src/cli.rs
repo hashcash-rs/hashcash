@@ -4,7 +4,7 @@
 use crate::{chain_spec, preludes::*};
 
 use substrate::{
-	client::cli::{commands::*, RunCmd, SubstrateCli},
+	client::cli::{commands::*, SubstrateCli},
 	frames::benchmarking::cli::BenchmarkCmd,
 };
 

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(feature = "runtime-benchmarks", allow(non_local_definitions))]
 #![recursion_limit = "256"]
 
 #[cfg(feature = "std")]

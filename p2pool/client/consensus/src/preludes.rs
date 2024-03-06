@@ -1,7 +1,7 @@
 // Copyright (c) 2024 Hisaishi Joe
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-pub const LOG_TARGET: &'static str = "consensus";
+pub const LOG_TARGET: &str = "consensus";
 
 pub mod hashcash {
 	pub mod client {

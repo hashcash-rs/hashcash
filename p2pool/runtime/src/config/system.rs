@@ -3,26 +3,21 @@
 
 use crate::*;
 
-use hashcash::primitives::core::{
-	constants::SS58_PREFIX, units::MiB, AccountId, AccountNonce, Hash,
-};
+use hashcash::primitives::core::{constants::SS58_PREFIX, units::MiB, Hash};
 use substrate::{
 	frames::{
 		support::{
 			derive_impl,
 			dispatch::DispatchClass,
 			traits::{ConstU32, Contains},
-			weights::{
-				constants::{
-					BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight,
-					WEIGHT_REF_TIME_PER_SECOND,
-				},
-				Weight,
+			weights::constants::{
+				BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight,
+				WEIGHT_REF_TIME_PER_SECOND,
 			},
 		},
 		system::{config_preludes::SolochainDefaultConfig, limits},
 	},
-	primitives::{runtime::Perbill, version::RuntimeVersion},
+	primitives::runtime::Perbill,
 };
 
 pub const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(1);

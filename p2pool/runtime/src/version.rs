@@ -6,10 +6,7 @@ use crate::*;
 #[cfg(feature = "std")]
 use substrate::primitives::version::NativeVersion;
 
-use substrate::primitives::{
-	runtime::create_runtime_str,
-	version::{runtime_version, RuntimeVersion},
-};
+use substrate::primitives::{runtime::create_runtime_str, version::runtime_version};
 
 #[runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {

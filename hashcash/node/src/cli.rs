@@ -5,7 +5,7 @@ use crate::{chain_spec, preludes::*};
 
 use hashcash::primitives::core::AccountId;
 use substrate::{
-	client::cli::{self, commands::*, CliConfiguration, Error, RunCmd, SubstrateCli},
+	client::cli::{self, commands::*, CliConfiguration, Error, SubstrateCli},
 	frames::benchmarking::cli::BenchmarkCmd,
 	primitives::{core::crypto::Ss58Codec, keyring::AccountKeyring},
 };
@@ -49,7 +49,7 @@ impl Cli {
 				let keyring = &self.run.get_keyring().unwrap_or(AccountKeyring::Alice);
 				self.options.author_id = Some(keyring.to_account_id());
 			} else {
-				if let Some(_) = &self.run.get_keyring() {
+				if self.run.get_keyring().is_some() {
 					return Err(Error::Input("Test keyring cannot be used in non-dev mode".into()));
 				}
 				return Err(Error::Input("No author specified".into()));

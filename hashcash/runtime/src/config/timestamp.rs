@@ -3,7 +3,7 @@
 
 use crate::*;
 
-use hashcash::primitives::core::{units::SECONDS, Moment};
+use hashcash::primitives::core::units::SECONDS;
 
 parameter_types! {
 	pub const MinimumPeriod: Moment = 3 * SECONDS;

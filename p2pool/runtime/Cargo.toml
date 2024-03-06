@@ -1,9 +1,14 @@
 [package]
 name = "p2pool-runtime"
+version = "0.0.0"
+publish = false
 authors = ["Hisaishi Joe <hisaishi@tuta.io>"]
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+
+[lints]
+workspace = true
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

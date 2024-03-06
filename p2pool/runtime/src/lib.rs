@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(feature = "runtime-benchmarks", allow(non_local_definitions))]
 #![recursion_limit = "256"]
 
 #[cfg(feature = "std")]
@@ -22,6 +23,7 @@ use substrate::{
 	frames::support::{
 		construct_runtime,
 		genesis_builder_helper::{build_config, create_default_config},
+		weights::Weight,
 	},
 	primitives::{
 		api::impl_runtime_apis,

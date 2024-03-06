@@ -3,7 +3,7 @@
 
 use crate::*;
 
-use hashcash::primitives::core::{units::CENTS, Balance};
+use hashcash::primitives::core::units::CENTS;
 use substrate::primitives::runtime::traits::ConstU32;
 
 pub const EXISTENTIAL_DEPOSIT: Balance = 1 * CENTS;

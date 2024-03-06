@@ -3,8 +3,12 @@ name = "hashcash-randomx-sys"
 description = "FFI bindings for RandomX"
 license = "GPL-3.0-or-later"
 version = "2.9.0"
+publish = false
 authors = ["Wei Tang <wei@that.world>"]
 edition = "2021"
+
+[lints]
+workspace = true
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

@@ -743,6 +743,7 @@ pub trait PreRuntimeProvider<B: BlockT> {
 }
 
 /// Empty pre-runtime digest provider.
+#[derive(Default)]
 pub struct EmptyPreRuntimeProvider<B> {
 	_marker: PhantomData<B>,
 }

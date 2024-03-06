@@ -3,7 +3,7 @@
 
 use crate::*;
 
-use hashcash::primitives::core::{units::CENTS, Balance};
+use hashcash::primitives::core::units::CENTS;
 use smallvec::smallvec;
 use substrate::{
 	frames::support::weights::{

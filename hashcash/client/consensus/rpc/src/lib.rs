@@ -79,7 +79,7 @@ pub trait MinerApi {
 pub struct Miner<C, I, L> {
 	block_import: Arc<Mutex<I>>,
 	client: Arc<C>,
-	sync_link: Arc<L>,
+	justification_sync_link: Arc<L>,
 }
 
 impl<C, I, L> Miner<C, I, L>
@@ -89,8 +89,12 @@ where
 	I: BlockImport<Block>,
 	L: JustificationSyncLink<Block>,
 {
-	pub fn new(client: Arc<C>, block_import: Arc<Mutex<I>>, sync_link: Arc<L>) -> Self {
-		Self { client, block_import, sync_link }
+	pub fn new(
+		client: Arc<C>,
+		block_import: Arc<Mutex<I>>,
+		justification_sync_link: Arc<L>,
+	) -> Self {
+		Self { client, block_import, justification_sync_link }
 	}
 
 	pub fn block_template_inner(&self) -> Result<Option<BlockTemplate>, MinerError> {
@@ -149,11 +153,12 @@ where
 
 		let header = import_block.post_header();
 		let mut block_import = self.block_import.lock();
-		match block_import.import_block(import_block).await {
-			Ok(res) => {
-				res.handle_justification(&header.hash(), *header.number(), &self.sync_link);
-			},
-			Err(_) => (),
+		if let Ok(res) = block_import.import_block(import_block).await {
+			res.handle_justification(
+				&header.hash(),
+				*header.number(),
+				&self.justification_sync_link,
+			);
 		}
 		Ok(header.hash())
 	}
@@ -168,13 +173,12 @@ where
 	L: JustificationSyncLink<Block> + 'static,
 {
 	fn block_template(&self) -> RpcResult<Option<BlockTemplate>> {
-		Ok(self
-			.block_template_inner()
-			.map_err(|e| jsonrpsee::core::Error::Custom(e.to_string()))?)
+		self.block_template_inner()
+			.map_err(|e| jsonrpsee::core::Error::Custom(e.to_string()))
 	}
 
 	fn submit_block(&self, block_submit_params: Bytes) -> RpcResult<H256> {
-		Ok(futures::executor::block_on(self.submit_block_inner(block_submit_params))
-			.map_err(|e| jsonrpsee::core::Error::Custom(e.to_string()))?)
+		futures::executor::block_on(self.submit_block_inner(block_submit_params))
+			.map_err(|e| jsonrpsee::core::Error::Custom(e.to_string()))
 	}
 }

@@ -75,7 +75,7 @@ pub fn new_partial(config: &Configuration) -> Result<Service, Error> {
 	let executor = service::new_wasm_executor::<SubstrateHostFunctions>(config);
 	let (client, backend, keystore_container, task_manager) =
 		service::new_full_parts::<Block, RuntimeApi, _>(
-			&config,
+			config,
 			telemetry.as_ref().map(|(_, telemetry)| telemetry.handle()),
 			executor,
 		)?;

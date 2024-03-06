@@ -3,7 +3,7 @@
 
 use crate::*;
 
-use hashcash::primitives::core::{AccountId, AccountIndex, BlakeTwo256, BlockNumber, Signature};
+use hashcash::primitives::core::{AccountIndex, BlakeTwo256, BlockNumber, Signature};
 use substrate::primitives::runtime::{generic, MultiAddress};
 
 pub type Address = MultiAddress<AccountId, AccountIndex>;

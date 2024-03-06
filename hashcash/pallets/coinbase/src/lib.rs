@@ -4,6 +4,9 @@
 //! Coinbase pallet for block rewards.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+// XXX: Suppress deprecation warnings for constant weight of coinbase call.
+// Remove this line when the weight is properly implemented.
+#![allow(deprecated)]
 
 pub use pallet::*;
 
@@ -18,7 +21,7 @@ pub type BalanceOf<T> =
 pub type InherentTypeOf<T> =
 	InherentType<<T as frame_system::Config>::AccountId, <T as Config>::Difficulty>;
 
-const LOG_TARGET: &'static str = "runtime::coinbase";
+const LOG_TARGET: &str = "runtime::coinbase";
 const LOCK_IDENTIFIER: LockIdentifier = *b"coinbase";
 
 ///
@@ -97,7 +100,7 @@ pub mod pallet {
 					};
 					T::Currency::set_lock(
 						LOCK_IDENTIFIER,
-						&dest,
+						dest,
 						new_lock,
 						WithdrawReasons::except(WithdrawReasons::TRANSACTION_PAYMENT),
 					);
@@ -121,7 +124,7 @@ pub mod pallet {
 			if height > T::MaturationTime::get() {
 				let unlocked_height = height - T::MaturationTime::get();
 
-				for (dest, value) in Rewards::<T>::take(&unlocked_height) {
+				for (dest, value) in Rewards::<T>::take(unlocked_height) {
 					RewardLocks::<T>::mutate(&dest, |lock| {
 						let locked = lock.unwrap();
 						if locked > value {
