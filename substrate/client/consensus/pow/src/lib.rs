@@ -724,7 +724,10 @@ pub fn find_pre_digest<B: BlockT>(header: &B::Header) -> Result<Option<Vec<u8>>,
 }
 
 /// Fetch PoW seal.
-pub fn fetch_seal<B: BlockT>(digest: Option<&DigestItem>, hash: B::Hash) -> Result<Vec<u8>, Error<B>> {
+pub fn fetch_seal<B: BlockT>(
+	digest: Option<&DigestItem>,
+	hash: B::Hash,
+) -> Result<Vec<u8>, Error<B>> {
 	match digest {
 		Some(DigestItem::Seal(id, seal)) =>
 			if id == &POW_ENGINE_ID {
