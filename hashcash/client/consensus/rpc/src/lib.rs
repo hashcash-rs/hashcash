@@ -100,6 +100,9 @@ where
 		&self,
 		shares: Vec<(AccountId, Difficulty)>,
 	) -> Result<BlockTemplate, Error> {
+		if shares.is_empty() {
+			return Err(Error::EmptyShares("Empty shares".to_string()));
+		}
 		let best_header = self.select_chain.best_chain().await.map_err(Error::Consensus)?;
 		let best_hash = best_header.hash();
 
