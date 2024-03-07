@@ -7,6 +7,9 @@ pub mod hashcash {
 			pub use hashcash_client_consensus_rpc as rpc;
 		}
 	}
+	pub mod primitives {
+		pub use hashcash_primitives_core as core;
+	}
 }
 pub mod substrate {
 	pub use parity_scale_codec as codec;
@@ -15,5 +18,12 @@ pub mod substrate {
 	}
 	pub mod primitives {
 		pub use sp_blockchain as blockchain;
+		pub use sp_consensus as consensus;
+		pub use sp_runtime as runtime;
+	}
+}
+pub mod p2pool {
+	pub mod client {
+		pub use p2pool_client_consensus as consensus;
 	}
 }

@@ -14,7 +14,7 @@ use substrate::client::{
 };
 
 pub fn run() -> Result<()> {
-	let cli = Cli::from_args();
+	let cli = Cli::from_args().finalize()?;
 
 	match &cli.subcommand {
 		Some(Subcommand::Benchmark(_cmd)) =>

@@ -1,10 +1,12 @@
-// Copyright (c) 2024 Ryuichi Sakamoto
+// Copyright (c) Hisaishi Joe
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::preludes::*;
+use crate::{
+	preludes::{Difficulty, *},
+	P2POOL_AUX_PREFIX,
+};
 
 use hashcash::client::consensus::{randomx, rpc::BlockTemplate, Seal};
-use sp_runtime::{testing::DigestItem, SaturatedConversion};
 use std::sync::Arc;
 use substrate::{
 	client::{
@@ -18,12 +20,14 @@ use substrate::{
 	primitives::{
 		consensus::{pow::POW_ENGINE_ID, Error as ConsensusError},
 		core::{H256, U256},
-		runtime::traits::{Block, Header},
+		runtime::{
+			traits::{Block, Header},
+			DigestItem, SaturatedConversion,
+		},
 	},
 };
 
 pub const MAINCHAIN_AUX_PREFIX: [u8; 4] = *b"MCH:";
-pub const P2POOL_AUX_PREFIX: [u8; 4] = *b"P2P:";
 
 pub struct P2PoolBlockImport<I, C> {
 	inner: I,
@@ -102,7 +106,7 @@ where
 			.map_err(|_| {
 				ConsensusError::ClientImport("Failed to calculate a RandomX hash".to_string())
 			})?;
-			let weight: u128 = U256::max_value()
+			let difficulty: Difficulty = U256::max_value()
 				.checked_div(U256::from_big_endian(work.as_bytes()))
 				.ok_or(ConsensusError::ClientImport("Invalid RandomX hash".to_string()))?
 				.saturated_into();
@@ -110,7 +114,7 @@ where
 				P2POOL_AUX_PREFIX.iter().chain(block.post_hash().as_ref()).copied().collect();
 			let _ = self
 				.client
-				.insert_aux(&[(&key[..], &weight.encode()[..])], &[])
+				.insert_aux(&[(&key[..], &difficulty.encode()[..])], &[])
 				.map_err(|e| ConsensusError::ClientImport(e.to_string()))?;
 		}
 

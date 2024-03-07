@@ -10,20 +10,43 @@ pub const LOG_TARGET: &str = "block-template";
 pub const STORAGE_KEY: &[u8] = b"block_template";
 
 use error::BlockTemplateError;
-use preludes::substrate::client::api::backend::AuxStore;
+use preludes::{
+	hashcash::primitives::core::AccountId,
+	substrate::{
+		client::api::AuxStore,
+		primitives::{
+			blockchain::HeaderBackend,
+			consensus::SelectChain,
+			runtime::traits::{Block, NumberFor},
+		},
+	},
+};
 pub use provider::BlockTemplateProvider;
 use std::sync::Arc;
 use worker::BlockTemplateSyncWorker;
 
-pub fn start_block_template_sync<C>(
+pub fn start_block_template_sync<B, C, S>(
 	target_chain: String,
 	client: Arc<C>,
-) -> Result<(BlockTemplateSyncWorker<C>, BlockTemplateProvider<C>), BlockTemplateError>
+	select_chain: S,
+	author: AccountId,
+	genesis_hash: B::Hash,
+	window_size: NumberFor<B>,
+) -> Result<(BlockTemplateSyncWorker<B, C, S>, BlockTemplateProvider<C>), BlockTemplateError>
 where
-	C: AuxStore + 'static,
+	B: Block,
+	C: AuxStore + HeaderBackend<B> + 'static,
+	S: SelectChain<B>,
 {
 	Ok((
-		BlockTemplateSyncWorker::new(target_chain, client.clone())?,
+		BlockTemplateSyncWorker::new(
+			target_chain,
+			client.clone(),
+			select_chain,
+			author,
+			genesis_hash,
+			window_size,
+		)?,
 		BlockTemplateProvider::new(client),
 	))
 }

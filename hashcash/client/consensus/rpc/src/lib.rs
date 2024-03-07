@@ -31,7 +31,7 @@ use substrate::{
 			pow::{DifficultyApi, POW_ENGINE_ID},
 			BlockOrigin, Environment, Proposer, SelectChain,
 		},
-		core::{crypto::Ss58Codec, Bytes, H256},
+		core::{Bytes, H256},
 		inherents::{CreateInherentDataProviders, InherentDataProvider},
 		runtime::{
 			generic::{BlockId, Digest},
@@ -57,7 +57,7 @@ pub struct BlockSubmitParams {
 #[rpc(client, server)]
 pub trait MinerApi {
 	#[method(name = "miner_getBlockTemplate")]
-	fn block_template(&self, shares: Vec<(String, Difficulty)>) -> Result<BlockTemplate, Error>;
+	fn block_template(&self, shares: Vec<(AccountId, Difficulty)>) -> Result<BlockTemplate, Error>;
 
 	#[method(name = "miner_submitBlock")]
 	fn submit_block(&self, block_submit_params: Bytes) -> Result<Hash, Error>;
@@ -111,7 +111,7 @@ where
 
 	pub async fn block_template_inner(
 		&self,
-		shares: Vec<(String, u128)>,
+		shares: Vec<(AccountId, Difficulty)>,
 	) -> Result<BlockTemplate, Error> {
 		let best_header = self.select_chain.best_chain().await.map_err(Error::Consensus)?;
 		let best_hash = best_header.hash();
@@ -123,14 +123,7 @@ where
 			.map_err(Error::Other)?;
 		let mut inherent_data =
 			inherent_data_providers.create_inherent_data().await.map_err(Error::Inherents)?;
-
-		let mut rewards = Vec::<(AccountId, Difficulty)>::new();
-		for (acc, weight) in shares {
-			if let Ok(acc) = AccountId::from_string(&acc) {
-				rewards.push((acc, weight));
-			}
-		}
-		let _ = inherent_data.put_data(coinbase::INHERENT_IDENTIFIER, &rewards);
+		let _ = inherent_data.put_data(coinbase::INHERENT_IDENTIFIER, &shares);
 
 		let mut inherent_digest = Digest::default();
 		for (id, data) in self.pre_runtime_provider.pre_runtime(&best_hash) {
@@ -217,7 +210,7 @@ where
 	PP: PreRuntimeProvider<Block> + Send + Sync + 'static,
 	S: SelectChain<Block> + 'static,
 {
-	fn block_template(&self, shares: Vec<(String, u128)>) -> Result<BlockTemplate, Error> {
+	fn block_template(&self, shares: Vec<(AccountId, Difficulty)>) -> Result<BlockTemplate, Error> {
 		futures::executor::block_on(self.block_template_inner(shares))
 	}
 

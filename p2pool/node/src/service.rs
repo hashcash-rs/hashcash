@@ -4,11 +4,14 @@
 use crate::{cli::CliOptions, preludes::*};
 
 use futures::FutureExt;
-use hashcash::primitives::core::opaque::Block;
+use hashcash::primitives::core::{opaque::Block, AccountId};
 use p2pool::{
 	client::{
 		block_template,
-		consensus::{start_miner, BlockSubmitter, MinerParams, P2PoolAlgorithm, P2PoolBlockImport},
+		consensus::{
+			start_miner, BlockSubmitter, MinerParams, P2PoolAlgorithm, P2PoolBlockImport,
+			P2POOL_ENGINE_ID,
+		},
 	},
 	runtime::RuntimeApi,
 };
@@ -134,14 +137,16 @@ pub fn new_partial(config: &Configuration) -> Result<Service, Error> {
 struct PreRuntimeProvider {
 	pub _client: Arc<FullClient>,
 	provider: block_template::BlockTemplateProvider<FullClient>,
+	author: AccountId,
 }
 
 impl PreRuntimeProvider {
 	fn new(
 		client: Arc<FullClient>,
 		provider: block_template::BlockTemplateProvider<FullClient>,
+		author: AccountId,
 	) -> Self {
-		Self { _client: client, provider }
+		Self { _client: client, provider, author }
 	}
 }
 
@@ -154,7 +159,10 @@ impl substrate::client::consensus::pow::PreRuntimeProvider<Block> for PreRuntime
 			Ok(Some(block_template)) => Some(block_template.encode()),
 			_ => None,
 		};
-		vec![(sp_consensus_pow::POW_ENGINE_ID, block_template)]
+		vec![
+			(sp_consensus_pow::POW_ENGINE_ID, block_template),
+			(P2POOL_ENGINE_ID, Some(self.author.encode())),
+		]
 	}
 }
 
@@ -236,9 +244,16 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 	})?;
 
 	if role.is_authority() {
+		let author = options.author_id.clone().unwrap();
+		let window_size = options.window_size;
+		let genesis_hash = client.chain_info().genesis_hash;
 		let (worker, provider) = block_template::start_block_template_sync(
 			options.mainchain_rpc.clone(),
 			client.clone(),
+			select_chain.clone(),
+			author.clone(),
+			genesis_hash,
+			window_size,
 		)
 		.map_err(|e| Error::Other(e.to_string()))?;
 		task_manager.spawn_handle().spawn("block-template", None, worker.run());
@@ -268,7 +283,7 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 				proposer_factory,
 				sync_oracle: sync_service.clone(),
 				justification_sync_link: sync_service.clone(),
-				pre_runtime_provider: PreRuntimeProvider::new(client.clone(), provider),
+				pre_runtime_provider: PreRuntimeProvider::new(client.clone(), provider, author),
 				create_inherent_data_providers: move |_, ()| async move {
 					Ok(TimestampInherentDataProvider::from_system_time())
 				},

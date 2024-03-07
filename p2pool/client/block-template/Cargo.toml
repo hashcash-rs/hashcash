@@ -22,6 +22,10 @@ tokio.workspace = true
 
 sc-client-api.workspace = true
 sp-blockchain.workspace = true
+sp-consensus.workspace = true
+sp-runtime.workspace = true
 
 hashcash-client-consensus-rpc.workspace = true
 hashcash-primitives-core = { workspace = true, features = ["std"] }
+
+p2pool-client-consensus.workspace = true
