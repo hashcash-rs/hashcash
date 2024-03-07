@@ -3,7 +3,10 @@
 
 use crate::{common, preludes::*, randomx};
 
-use hashcash::randomx::{RandomXFlags, RandomXVm};
+use hashcash::{
+	primitives::core::constants::SS58_PREFIX,
+	randomx::{RandomXFlags, RandomXVm},
+};
 use log::*;
 use rand::{thread_rng, Rng};
 use std::{sync::Arc, time::Duration};
@@ -16,7 +19,12 @@ pub use substrate::{
 		},
 	},
 	codec::Encode,
-	primitives::{api::ProvideRuntimeApi, consensus::pow::Seal, runtime::traits::Block as BlockT},
+	primitives::{
+		api::ProvideRuntimeApi,
+		consensus::pow::Seal,
+		core::crypto::{Ss58AddressFormat, Ss58Codec},
+		runtime::traits::Block as BlockT,
+	},
 };
 
 pub type MiningMetadata = sc_consensus_pow::MiningMetadata<Hash, Difficulty>;
@@ -67,7 +75,15 @@ where
 	C: ProvideRuntimeApi<Block> + HeaderBackend<Block> + 'static,
 	H: MiningHandle + Send + Sync + 'static,
 {
-	pub fn new(client: Arc<C>, handle: Arc<H>) -> Self {
+	pub fn new(params: MinerParams<C, H>) -> Self {
+		let MinerParams { client, handle, author, .. } = params;
+
+		info!(
+			target: LOG_TARGET,
+			"⚒️  Miner address is: {}",
+			author.to_ss58check_with_version(Ss58AddressFormat::custom(SS58_PREFIX))
+		);
+
 		Miner { client, handle, nonce: thread_rng().gen(), _marker: Default::default() }
 	}
 
@@ -191,6 +207,8 @@ where
 	pub client: Arc<C>,
 	/// Mining handle for fetching metadata and submitting seal.
 	pub handle: Arc<H>,
+	/// Author account id.
+	pub author: AccountId,
 	/// Number of threads to use for mining.
 	pub threads_count: usize,
 }
@@ -200,5 +218,6 @@ where
 	C: ProvideRuntimeApi<Block> + HeaderBackend<Block> + 'static,
 	H: MiningHandle + Send + Sync + 'static,
 {
-	Miner::new(params.client, params.handle).start(params.threads_count);
+	let threads_count = params.threads_count;
+	Miner::new(params).start(threads_count);
 }

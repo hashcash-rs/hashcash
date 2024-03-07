@@ -3,12 +3,7 @@
 
 use crate::preludes::*;
 
-use hashcash::primitives::core::constants::SS58_PREFIX;
-use log::*;
-use substrate::primitives::{
-	core::crypto::{Ss58AddressFormat, Ss58Codec},
-	inherents::{self, InherentData, InherentIdentifier},
-};
+use substrate::primitives::inherents::{self, InherentData, InherentIdentifier};
 
 pub mod coinbase {
 	use super::*;
@@ -24,14 +19,6 @@ pub mod coinbase {
 	impl InherentDataProvider {
 		pub fn new(author: AccountId) -> Self {
 			Self { author }
-		}
-
-		pub fn print_author(&self) {
-			info!(
-				target: LOG_TARGET,
-				"Miner address is: {}",
-				self.author.to_ss58check_with_version(Ss58AddressFormat::custom(SS58_PREFIX))
-			);
 		}
 	}
 

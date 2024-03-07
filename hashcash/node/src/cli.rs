@@ -45,14 +45,14 @@ impl Cli {
 				let author = AccountId::from_string(author)
 					.map_err(|_| Error::Input("Invalid author".into()))?;
 				self.options.author_id = Some(author);
-			} else if is_dev {
-				let keyring = &self.run.get_keyring().unwrap_or(AccountKeyring::Alice);
-				self.options.author_id = Some(keyring.to_account_id());
-			} else {
-				if self.run.get_keyring().is_some() {
-					return Err(Error::Input("Test keyring cannot be used in non-dev mode".into()));
+			} else if self.run.role(is_dev)?.is_authority() {
+				if let Some(keyring) = self.run.get_keyring() {
+					self.options.author_id = Some(keyring.to_account_id());
+				} else if is_dev {
+					self.options.author_id = Some(AccountKeyring::Alice.to_account_id());
+				} else {
+					return Err(Error::Input("No author specified".into()));
 				}
-				return Err(Error::Input("No author specified".into()));
 			}
 		}
 		Ok(self)
