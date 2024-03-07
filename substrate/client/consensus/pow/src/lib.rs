@@ -47,7 +47,6 @@ pub use crate::worker::{
 use futures::{Future, StreamExt};
 use log::*;
 use parity_scale_codec::{Decode, Encode};
-use parking_lot::Mutex;
 use sc_client_api::{backend::AuxStore, BlockOf, BlockchainEvents};
 use sc_consensus::{
 	BasicQueue, BlockCheckParams, BlockImport, BlockImportParams, BoxJustificationImport,
@@ -506,7 +505,7 @@ pub struct PowParams<C, SC, I, A, PF, SO, L, CIDP, PP> {
 	/// A select chain implementation to select the best block.
 	pub select_chain: SC,
 	/// The block import.
-	pub block_import: Arc<Mutex<I>>,
+	pub block_import: I,
 	/// PoW algorithm.
 	pub algorithm: A,
 	/// The proposer factory to build proposer instances.

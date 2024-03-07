@@ -96,7 +96,7 @@ where
 
 	pub fn new(
 		algorithm: Algorithm,
-		block_import: Arc<Mutex<I>>,
+		block_import: I,
 		justification_sync_link: L,
 	) -> Self {
 		Self {
@@ -104,7 +104,7 @@ where
 			algorithm: Arc::new(algorithm),
 			justification_sync_link: Arc::new(justification_sync_link),
 			build: Arc::new(RwLock::new(None)),
-			block_import,
+			block_import: Arc::new(Mutex::new(block_import)),
 		}
 	}
 

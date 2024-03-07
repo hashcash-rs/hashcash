@@ -190,7 +190,6 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 	let role = config.role.clone();
 	let prometheus_registry = config.prometheus_registry().cloned();
 
-	let block_import = Arc::new(Mutex::new(block_import));
 	let rpc_extensions_builder = {
 		let client = client.clone();
 		let pool = transaction_pool.clone();

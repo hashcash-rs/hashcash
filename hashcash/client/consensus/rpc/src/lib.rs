@@ -75,7 +75,7 @@ where
 	S: SelectChain<Block>,
 {
 	pub fn new(
-		block_import: Arc<Mutex<I>>,
+		block_import: I,
 		build_time: Duration,
 		client: Arc<C>,
 		create_inherent_data_providers: CIDP,
@@ -85,7 +85,7 @@ where
 		select_chain: S,
 	) -> Self {
 		Self {
-			block_import,
+			block_import: Arc::new(Mutex::new(block_import)),
 			build_time,
 			client,
 			create_inherent_data_providers,

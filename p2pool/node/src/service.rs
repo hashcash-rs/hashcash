@@ -15,7 +15,6 @@ use p2pool::{
 	},
 	runtime::RuntimeApi,
 };
-use parking_lot::Mutex;
 use std::{sync::Arc, time::Duration};
 use substrate::{
 	client::{
@@ -275,7 +274,6 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 			telemetry.as_ref().map(|x| x.handle()),
 		);
 
-		let block_import = Arc::new(Mutex::new(block_import));
 		let (worker, worker_task) =
 			substrate::client::consensus::pow::start_mining_worker(PowParams {
 				client: client.clone(),

@@ -31,7 +31,7 @@ use substrate::{
 pub struct FullDeps<C, CIDP, I, L, P, PF, PP, S> {
 	pub client: Arc<C>,
 	pub pool: Arc<P>,
-	pub block_import: Arc<Mutex<I>>,
+	pub block_import: I,
 	pub justification_sync_link: Arc<L>,
 	pub deny_unsafe: DenyUnsafe,
 	pub build_time: Duration,
