@@ -53,15 +53,15 @@ pub mod substrate {
 		pub use sp_api as api;
 		pub use sp_block_builder as block_builder;
 		pub use sp_blockchain as blockchain;
+		pub mod consensus {
+			pub use sp_consensus::*;
+			pub use sp_consensus_pow as pow;
+		}
 		pub use sp_core as core;
 		pub use sp_inherents as inherents;
 		pub use sp_io as io;
 		pub use sp_keyring as keyring;
 		pub use sp_runtime as runtime;
 		pub use sp_timestamp as timestamp;
-		pub mod consensus {
-			pub use sp_consensus::*;
-			pub use sp_consensus_pow as pow;
-		}
 	}
 }

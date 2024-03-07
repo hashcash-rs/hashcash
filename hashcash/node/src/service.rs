@@ -6,7 +6,7 @@ use crate::{cli::CliOptions, preludes::*};
 use futures::FutureExt;
 use hashcash::{
 	client::consensus::{inherents::coinbase::InherentDataProvider, MinerParams, RandomXAlgorithm},
-	primitives::core::opaque::Block,
+	primitives::core::{opaque::Block, AccountId, Hash},
 	runtime::RuntimeApi,
 };
 use parking_lot::Mutex;
@@ -16,7 +16,10 @@ use substrate::{
 		api::Backend,
 		basic_authorship::ProposerFactory,
 		consensus::{
-			pow::{EmptyPreRuntimeProvider, ImportQueueParams, PowBlockImport, PowParams},
+			pow::{
+				EmptyPreRuntimeProvider, ImportQueueParams, PowBlockImport, PowParams,
+				PreRuntimeProvider,
+			},
 			DefaultImportQueue, LongestChain,
 		},
 		executor::WasmExecutor,
@@ -27,7 +30,8 @@ use substrate::{
 		transaction_pool::{api::OffchainTransactionPoolFactory, BasicPool, FullPool},
 	},
 	primitives::{
-		io::SubstrateHostFunctions,
+		consensus::pow::POW_ENGINE_ID, core::Encode, io::SubstrateHostFunctions,
+		runtime::ConsensusEngineId,
 		timestamp::InherentDataProvider as TimestampInherentDataProvider,
 	},
 };
@@ -54,6 +58,16 @@ pub type Service = service::PartialComponents<
 		Option<Telemetry>,
 	),
 >;
+
+struct AuthorProvider {
+	pub author: AccountId,
+}
+
+impl PreRuntimeProvider<Block> for AuthorProvider {
+	fn pre_runtime(&self, _best_hash: &Hash) -> Vec<(ConsensusEngineId, Option<Vec<u8>>)> {
+		vec![(POW_ENGINE_ID, Some(self.author.encode()))]
+	}
+}
 
 pub fn new_partial(config: &Configuration) -> Result<Service, Error> {
 	let telemetry = config
@@ -249,7 +263,7 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 				proposer_factory,
 				sync_oracle: sync_service.clone(),
 				justification_sync_link: sync_service.clone(),
-				pre_runtime_provider: EmptyPreRuntimeProvider::<Block>::new(),
+				pre_runtime_provider: AuthorProvider { author: author.clone() },
 				create_inherent_data_providers: move |_, ()| {
 					let author = author.clone();
 					async move {
