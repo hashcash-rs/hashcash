@@ -25,7 +25,7 @@ sp-blockchain.workspace = true
 sp-consensus.workspace = true
 sp-runtime.workspace = true
 
-hashcash-client-consensus-rpc.workspace = true
+hashcash-primitives = { workspace = true, features = ["std"] }
 hashcash-primitives-core = { workspace = true, features = ["std"] }
 
 p2pool-client-consensus.workspace = true

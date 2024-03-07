@@ -6,7 +6,10 @@ use crate::{
 	P2POOL_AUX_PREFIX,
 };
 
-use hashcash::client::consensus::{randomx, rpc::BlockTemplate, Seal};
+use hashcash::{
+	client::consensus::{randomx, Seal},
+	primitives::block_template::BlockTemplate,
+};
 use std::sync::Arc;
 use substrate::{
 	client::{

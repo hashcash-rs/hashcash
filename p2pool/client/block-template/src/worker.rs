@@ -3,9 +3,9 @@
 
 use crate::{error::*, preludes::*, LOG_TARGET, STORAGE_KEY};
 
-use hashcash::{
-	client::consensus::rpc::BlockTemplate,
-	primitives::core::{AccountId, Difficulty},
+use hashcash::primitives::{
+	block_template::BlockTemplate,
+	core::{AccountId, Difficulty},
 };
 use jsonrpsee::{
 	core::{client::ClientT, params::ArrayParams},
@@ -163,16 +163,15 @@ where
 	async fn update_block_template(&self, shares: Vec<(AccountId, Difficulty)>) {
 		match self
 			.rpc_client
-			.request::<Option<BlockTemplate>, ArrayParams>(
+			.request::<BlockTemplate, ArrayParams>(
 				"miner_getBlockTemplate",
 				rpc_params!(shares),
 			)
 			.await
 		{
-			Ok(Some(res)) => {
+			Ok(res) => {
 				let _ = self.client.as_ref().insert_aux(&[(STORAGE_KEY, &res.encode()[..])], &[]);
 			},
-			Ok(None) => (),
 			Err(e) => {
 				log::warn!(target: LOG_TARGET, "Unable to get block template: {:?}", e);
 			},

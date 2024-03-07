@@ -3,7 +3,10 @@
 
 use crate::preludes::*;
 
-use hashcash::client::consensus::{self, randomx, rpc::BlockTemplate};
+use hashcash::{
+	client::consensus::{self, randomx},
+	primitives::block_template::BlockTemplate,
+};
 use std::sync::Arc;
 use substrate::{
 	client::{

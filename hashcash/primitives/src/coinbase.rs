@@ -1,12 +1,17 @@
 // Copyright (c) Ryuichi Sakamoto
 // SPDX-License-Identifier: Apache-2.0
 
-#[cfg(feature = "std")]
-use parity_scale_codec::Decode;
-use parity_scale_codec::Encode;
+use crate::preludes::*;
 
-use sp_inherents::{InherentIdentifier, IsFatalError};
-use sp_runtime::sp_std::collections::btree_map::BTreeMap;
+#[cfg(feature = "std")]
+use substrate::codec::Decode;
+use substrate::{
+	codec::Encode,
+	primitives::{
+		inherents::{InherentIdentifier, IsFatalError},
+		std::collections::btree_map::BTreeMap,
+	},
+};
 
 pub const INHERENT_IDENTIFIER: InherentIdentifier = *b"coinbase";
 

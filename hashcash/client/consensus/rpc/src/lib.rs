@@ -10,20 +10,20 @@ use error::Error;
 use hashcash::{
 	client::consensus,
 	primitives::{
+		block_template::{BlockSubmitParams, BlockTemplate},
 		coinbase,
 		core::{opaque::Block, AccountId, Difficulty, Hash},
 	},
 };
 use jsonrpsee::{core::async_trait, proc_macros::rpc};
 use parking_lot::Mutex;
-use serde::{Deserialize, Serialize};
 use std::{sync::Arc, time::Duration};
 use substrate::{
 	client::consensus::{
 		pow::{PowIntermediate, PreRuntimeProvider, INTERMEDIATE_KEY},
 		BlockImport, BlockImportParams, JustificationSyncLink, StateAction, StorageChanges,
 	},
-	codec::{Decode, Encode},
+	codec::Decode,
 	primitives::{
 		api::{ApiExt, CallApiAt, ProvideRuntimeApi},
 		blockchain::HeaderBackend,
@@ -40,19 +40,6 @@ use substrate::{
 		},
 	},
 };
-
-#[derive(Clone, Encode, Decode, Eq, PartialEq, Serialize, Deserialize)]
-pub struct BlockTemplate {
-	pub block: Block,
-	pub difficulty: Difficulty,
-	pub seed_hash: Hash,
-}
-
-#[derive(Clone, Encode, Decode, Eq, PartialEq)]
-pub struct BlockSubmitParams {
-	pub block: Block,
-	pub seal: Vec<u8>,
-}
 
 #[rpc(client, server)]
 pub trait MinerApi {

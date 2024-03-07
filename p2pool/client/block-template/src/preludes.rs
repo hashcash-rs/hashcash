@@ -2,12 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 pub mod hashcash {
-	pub mod client {
-		pub mod consensus {
-			pub use hashcash_client_consensus_rpc as rpc;
-		}
-	}
 	pub mod primitives {
+		pub use hashcash_primitives::*;
 		pub use hashcash_primitives_core as core;
 	}
 }

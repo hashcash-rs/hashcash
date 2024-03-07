@@ -7,10 +7,10 @@ pub mod hashcash {
 	pub mod client {
 		pub mod consensus {
 			pub use hashcash_client_consensus::*;
-			pub use hashcash_client_consensus_rpc as rpc;
 		}
 	}
 	pub mod primitives {
+		pub use hashcash_primitives::*;
 		pub use hashcash_primitives_core as core;
 	}
 	pub use hashcash_randomx as randomx;

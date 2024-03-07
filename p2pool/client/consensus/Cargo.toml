@@ -33,6 +33,6 @@ sp-consensus-pow.workspace = true
 sp-runtime = { workspace = true, features = ["std"] }
 
 hashcash-client-consensus.workspace = true
-hashcash-client-consensus-rpc.workspace = true
+hashcash-primitives = { workspace = true, features = ["std"] }
 hashcash-primitives-core = { workspace = true, features = ["std"] }
 hashcash-randomx.workspace = true

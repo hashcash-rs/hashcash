@@ -5,11 +5,8 @@ use crate::preludes::*;
 
 use futures::{channel::mpsc, SinkExt};
 use hashcash::{
-	client::consensus::{
-		self, randomx,
-		rpc::{BlockSubmitParams, BlockTemplate},
-		MiningHandle,
-	},
+	client::consensus::{self, randomx, MiningHandle},
+	primitives::block_template::{BlockSubmitParams, BlockTemplate},
 	randomx::{RandomXFlags, RandomXVm},
 };
 use log::*;

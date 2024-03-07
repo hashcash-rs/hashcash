@@ -3,7 +3,7 @@
 
 use crate::{error::*, preludes::*, STORAGE_KEY};
 
-use hashcash::client::consensus::rpc::BlockTemplate;
+use hashcash::primitives::block_template::BlockTemplate;
 use std::sync::Arc;
 use substrate::{client::api::backend::AuxStore, codec::Decode};
 

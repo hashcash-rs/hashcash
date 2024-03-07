@@ -18,7 +18,6 @@ futures.workspace = true
 jsonrpsee = { workspace = true, features = ["client-core", "macros", "server"] }
 parking_lot.workspace = true
 parity-scale-codec = { workspace = true, features = ["std", "derive"] }
-serde.workspace = true
 thiserror.workspace = true
 
 sc-consensus.workspace = true
