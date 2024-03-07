@@ -13,30 +13,33 @@ use error::BlockTemplateError;
 use preludes::{
 	hashcash::primitives::core::AccountId,
 	substrate::{
-		client::api::AuxStore,
+		client::api::{backend::AuxStore, BlockchainEvents},
 		primitives::{
 			blockchain::HeaderBackend,
-			consensus::SelectChain,
+			consensus::{SelectChain, SyncOracle},
 			runtime::traits::{Block, NumberFor},
 		},
 	},
 };
 pub use provider::BlockTemplateProvider;
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use worker::BlockTemplateSyncWorker;
 
-pub fn start_block_template_sync<B, C, S>(
+pub fn start_block_template_sync<B, C, S, SO>(
 	target_chain: String,
 	client: Arc<C>,
 	select_chain: S,
 	author: AccountId,
 	genesis_hash: B::Hash,
 	window_size: NumberFor<B>,
-) -> Result<(BlockTemplateSyncWorker<B, C, S>, BlockTemplateProvider<C>), BlockTemplateError>
+	sync_oracle: SO,
+	timeout: Duration,
+) -> Result<(BlockTemplateSyncWorker<B, C, S, SO>, BlockTemplateProvider<C>), BlockTemplateError>
 where
 	B: Block,
-	C: AuxStore + HeaderBackend<B> + 'static,
+	C: AuxStore + BlockchainEvents<B> + HeaderBackend<B> + 'static,
 	S: SelectChain<B>,
+	SO: SyncOracle,
 {
 	Ok((
 		BlockTemplateSyncWorker::new(
@@ -46,6 +49,8 @@ where
 			author,
 			genesis_hash,
 			window_size,
+			sync_oracle,
+			timeout,
 		)?,
 		BlockTemplateProvider::new(client),
 	))

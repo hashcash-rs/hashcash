@@ -254,6 +254,8 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 			author.clone(),
 			genesis_hash,
 			window_size,
+			sync_service.clone(),
+			Duration::new(10, 0),
 		)
 		.map_err(|e| Error::Other(e.to_string()))?;
 		task_manager.spawn_handle().spawn("block-template", None, worker.run());

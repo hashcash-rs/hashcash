@@ -3,6 +3,7 @@
 
 use crate::{error::*, preludes::*, LOG_TARGET, STORAGE_KEY};
 
+use futures::StreamExt;
 use hashcash::primitives::{
 	block_template::BlockTemplate,
 	core::{AccountId, Difficulty},
@@ -13,13 +14,16 @@ use jsonrpsee::{
 	rpc_params,
 };
 use p2pool::client::consensus::{P2POOL_AUX_PREFIX, P2POOL_ENGINE_ID};
-use std::{collections::BTreeMap, marker::PhantomData, sync::Arc};
+use std::{collections::BTreeMap, sync::Arc, time::Duration};
 use substrate::{
-	client::api::backend::AuxStore,
+	client::{
+		api::{backend::AuxStore, BlockchainEvents},
+		consensus::pow::UntilImportedOrTimeout,
+	},
 	codec::{Decode, Encode},
 	primitives::{
 		blockchain::HeaderBackend,
-		consensus::SelectChain,
+		consensus::{SelectChain, SyncOracle},
 		runtime::{
 			traits::{Block, Header, NumberFor, Saturating, Zero},
 			DigestItem,
@@ -27,21 +31,23 @@ use substrate::{
 	},
 };
 
-pub struct BlockTemplateSyncWorker<B: Block, C, S> {
+pub struct BlockTemplateSyncWorker<B: Block, C, S, SO> {
 	rpc_client: HttpClient,
 	client: Arc<C>,
 	select_chain: S,
 	author: AccountId,
 	genesis_hash: B::Hash,
 	window_size: NumberFor<B>,
-	_marker: PhantomData<B>,
+	sync_oracle: SO,
+	timeout: Duration,
 }
 
-impl<B, C, S> BlockTemplateSyncWorker<B, C, S>
+impl<B, C, S, SO> BlockTemplateSyncWorker<B, C, S, SO>
 where
 	B: Block,
-	C: AuxStore + HeaderBackend<B> + 'static,
+	C: AuxStore + BlockchainEvents<B> + HeaderBackend<B> + 'static,
 	S: SelectChain<B>,
+	SO: SyncOracle,
 {
 	pub fn new(
 		mainchain_rpc: String,
@@ -50,6 +56,8 @@ where
 		author: AccountId,
 		genesis_hash: B::Hash,
 		window_size: NumberFor<B>,
+		sync_oracle: SO,
+		timeout: Duration,
 	) -> Result<Self, BlockTemplateError> {
 		Ok(Self {
 			rpc_client: HttpClientBuilder::default()
@@ -60,15 +68,24 @@ where
 			author,
 			genesis_hash,
 			window_size,
-			_marker: Default::default(),
+			sync_oracle,
+			timeout,
 		})
 	}
 
 	pub async fn run(self) {
+		let mut timer =
+			UntilImportedOrTimeout::new(self.client.import_notification_stream(), self.timeout);
 		loop {
-			match self.get_shares().await {
-				Ok(shares) => self.update_block_template(shares).await,
-				Err(e) => log::warn!(target: LOG_TARGET, "{}", e),
+			if timer.next().await.is_none() {
+				break;
+			}
+
+			if !self.sync_oracle.is_major_syncing() {
+				match self.get_shares().await {
+					Ok(shares) => self.update_block_template(shares).await,
+					Err(e) => log::warn!(target: LOG_TARGET, "{}", e),
+				}
 			}
 			tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
 		}
@@ -88,9 +105,13 @@ where
 		while current.hash() != self.genesis_hash && count < self.window_size {
 			let author = match self.get_author(current.clone()) {
 				Ok(Some(author)) => author,
-				Ok(None) => continue,
+				Ok(None) => {
+					current = self.get_parent(current)?;
+					continue;
+				},
 				Err(e) => {
 					log::warn!(target: LOG_TARGET, "{}", e);
+					current = self.get_parent(current)?;
 					continue;
 				},
 			};
@@ -98,6 +119,7 @@ where
 				Ok(diffculty) => diffculty,
 				Err(e) => {
 					log::warn!(target: LOG_TARGET, "{}", e);
+					current = self.get_parent(current)?;
 					continue;
 				},
 			};
@@ -108,12 +130,7 @@ where
 				},
 			};
 
-			let parent_hash = current.parent_hash();
-			current = self
-				.client
-				.header(*parent_hash)
-				.map_err(|e| format!("Unable to get best chain: {:?}", e))?
-				.ok_or(format!("Header does not exist: {:?}", parent_hash))?;
+			current = self.get_parent(current)?;
 			count = count.saturating_plus_one();
 		}
 
@@ -126,8 +143,17 @@ where
 			shares.push((self.author.clone(), 1));
 		}
 
-		log::debug!(target: LOG_TARGET, "Shares: {:?}", shares);
 		Ok(shares)
+	}
+
+	fn get_parent(&self, header: <B as Block>::Header) -> Result<<B as Block>::Header, String> {
+		let parent_hash = header.parent_hash();
+		let parent = self
+			.client
+			.header(*parent_hash)
+			.map_err(|e| format!("Unable to get best chain: {:?}", e))?
+			.ok_or(format!("Header does not exist: {:?}", parent_hash))?;
+		Ok(parent)
 	}
 
 	fn get_author(&self, header: <B as Block>::Header) -> Result<Option<AccountId>, String> {
@@ -163,10 +189,7 @@ where
 	async fn update_block_template(&self, shares: Vec<(AccountId, Difficulty)>) {
 		match self
 			.rpc_client
-			.request::<BlockTemplate, ArrayParams>(
-				"miner_getBlockTemplate",
-				rpc_params!(shares),
-			)
+			.request::<BlockTemplate, ArrayParams>("miner_getBlockTemplate", rpc_params!(shares))
 			.await
 		{
 			Ok(res) => {

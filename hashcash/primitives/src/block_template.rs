@@ -1,6 +1,8 @@
 // Copyright (c) Hisaishi Joe
 // SPDX-License-Identifier: Apache-2.0
 
+#![cfg(feature = "std")]
+
 use crate::preludes::*;
 
 use hashcash::primitives::core::{opaque::Block, Difficulty, Hash};
