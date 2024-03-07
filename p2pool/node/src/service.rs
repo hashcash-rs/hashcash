@@ -8,7 +8,7 @@ use hashcash::primitives::core::opaque::Block;
 use p2pool::{
 	client::{
 		block_template,
-		consensus::{start_miner, BlockSubmitter, MinerParams, P2PoolAlgorithm},
+		consensus::{start_miner, BlockSubmitter, MinerParams, P2PoolAlgorithm, P2PoolBlockImport},
 	},
 	runtime::RuntimeApi,
 };
@@ -51,7 +51,7 @@ pub type Service = service::PartialComponents<
 	(
 		PowBlockImport<
 			Block,
-			Arc<FullClient>,
+			P2PoolBlockImport<Arc<FullClient>, FullClient>,
 			FullClient,
 			FullSelectChain,
 			P2PoolAlgorithm<FullClient>,
@@ -98,8 +98,10 @@ pub fn new_partial(config: &Configuration) -> Result<Service, Error> {
 
 	let algorithm = P2PoolAlgorithm::new(client.clone());
 
+	let p2pool_block_import = P2PoolBlockImport::new(client.clone(), client.clone());
+
 	let pow_block_import = PowBlockImport::new(
-		client.clone(),
+		p2pool_block_import.clone(),
 		client.clone(),
 		select_chain.clone(),
 		algorithm.clone(),

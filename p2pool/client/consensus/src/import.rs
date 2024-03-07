@@ -25,9 +25,15 @@ use substrate::{
 pub const MAINCHAIN_AUX_PREFIX: [u8; 4] = *b"MCH:";
 pub const P2POOL_AUX_PREFIX: [u8; 4] = *b"P2P:";
 
-struct P2PoolBlockImport<I, C> {
+pub struct P2PoolBlockImport<I, C> {
 	inner: I,
 	client: Arc<C>,
+}
+
+impl<I: Clone, C> Clone for P2PoolBlockImport<I, C> {
+	fn clone(&self) -> Self {
+		Self { inner: self.inner.clone(), client: self.client.clone() }
+	}
 }
 
 impl<I, C> P2PoolBlockImport<I, C> {
@@ -96,7 +102,7 @@ where
 			.map_err(|_| {
 				ConsensusError::ClientImport("Failed to calculate a RandomX hash".to_string())
 			})?;
-			let share: u128 = U256::max_value()
+			let weight: u128 = U256::max_value()
 				.checked_div(U256::from_big_endian(work.as_bytes()))
 				.ok_or(ConsensusError::ClientImport("Invalid RandomX hash".to_string()))?
 				.saturated_into();
@@ -104,7 +110,7 @@ where
 				P2POOL_AUX_PREFIX.iter().chain(block.post_hash().as_ref()).copied().collect();
 			let _ = self
 				.client
-				.insert_aux(&[(&key[..], &share.encode()[..])], &[])
+				.insert_aux(&[(&key[..], &weight.encode()[..])], &[])
 				.map_err(|e| ConsensusError::ClientImport(e.to_string()))?;
 		}
 

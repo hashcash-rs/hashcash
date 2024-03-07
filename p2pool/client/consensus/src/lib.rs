@@ -8,5 +8,6 @@ mod preludes;
 mod submit;
 
 pub use algorithm::*;
+pub use import::*;
 pub use miner::{start_miner, MinerParams};
 pub use submit::*;
