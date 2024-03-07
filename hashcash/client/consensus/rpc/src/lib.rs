@@ -25,7 +25,7 @@ use substrate::{
 	},
 	codec::Decode,
 	primitives::{
-		api::{ApiExt, CallApiAt, ProvideRuntimeApi},
+		api::{ApiExt, CallApiAt, Core, ProvideRuntimeApi},
 		blockchain::HeaderBackend,
 		consensus::{
 			pow::{DifficultyApi, POW_ENGINE_ID},
@@ -150,6 +150,7 @@ where
 		let block_submit_params =
 			BlockSubmitParams::decode(&mut &block_submit_params[..]).map_err(Error::Codec)?;
 
+		let block = block_submit_params.block.clone();
 		let (header, body) = block_submit_params.block.deconstruct();
 		let mut import_block =
 			BlockImportParams::new(BlockOrigin::NetworkBroadcast, header.clone());
@@ -158,12 +159,11 @@ where
 		import_block.body = Some(body);
 
 		let parent_hash = header.parent_hash();
+		let api = self.client.runtime_api();
+		api.execute_block(*parent_hash, block)?;
 		let state = self.client.state_at(*parent_hash).map_err(Error::RuntimeApi)?;
-		let storage_changes = self
-			.client
-			.runtime_api()
-			.into_storage_changes(&state, *parent_hash)
-			.map_err(Error::StorageChanges)?;
+		let storage_changes =
+			api.into_storage_changes(&state, *parent_hash).map_err(Error::StorageChanges)?;
 
 		import_block.state_action =
 			StateAction::ApplyChanges(StorageChanges::Changes(storage_changes));

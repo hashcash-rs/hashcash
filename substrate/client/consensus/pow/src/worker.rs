@@ -94,11 +94,7 @@ where
 		self.version.fetch_add(1, Ordering::SeqCst);
 	}
 
-	pub fn new(
-		algorithm: Algorithm,
-		block_import: I,
-		justification_sync_link: L,
-	) -> Self {
+	pub fn new(algorithm: Algorithm, block_import: I, justification_sync_link: L) -> Self {
 		Self {
 			version: Arc::new(AtomicUsize::new(0)),
 			algorithm: Arc::new(algorithm),
