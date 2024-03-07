@@ -95,10 +95,12 @@ where
 							Some(Ok(pre_runtime)) => pre_runtime,
 							Some(Err(_)) => {
 								error = Some(Error::InvalidBlockTemplate);
+								handle.reset();
 								continue;
 							},
 							None => {
 								error = Some(Error::EmptyBlockTemplate);
+								handle.reset();
 								continue;
 							},
 						};

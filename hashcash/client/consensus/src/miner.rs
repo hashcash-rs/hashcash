@@ -33,6 +33,7 @@ pub trait MiningHandle {
 	fn metadata(&self) -> Option<MiningMetadata>;
 	fn submit(&self, seal: Seal) -> bool;
 	fn version(&self) -> Version;
+	fn reset(&self);
 }
 
 impl<B, A, L, P, I> MiningHandle for sc_consensus_pow::MiningHandle<B, A, L, P, I>
@@ -52,6 +53,10 @@ where
 
 	fn version(&self) -> Version {
 		sc_consensus_pow::MiningHandle::version(self)
+	}
+
+	fn reset(&self) {
+		sc_consensus_pow::MiningHandle::on_major_syncing(self)
 	}
 }
 
