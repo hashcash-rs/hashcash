@@ -113,7 +113,7 @@ where
 				.client
 				.header(*parent_hash)
 				.map_err(|e| format!("Unable to get best chain: {:?}", e))?
-				.ok_or(format!("Not exist header: {:?}", parent_hash))?;
+				.ok_or(format!("Header does not exist: {:?}", parent_hash))?;
 			count = count.saturating_plus_one();
 		}
 
@@ -135,7 +135,7 @@ where
 		for log in header.digest().logs() {
 			if let DigestItem::PreRuntime(P2POOL_ENGINE_ID, v) = log {
 				if author.is_some() {
-					return Err("Duplicated author".to_string());
+					return Err("Multiple authors exist".to_string());
 				}
 				author = Some(
 					AccountId::decode(&mut &v[..])
@@ -155,7 +155,7 @@ where
 			.get_aux(&key)
 			.map_err(|e| format!("Unable to get difficulty: {:?}", e))?
 			.map(|v| Difficulty::decode(&mut &v[..]))
-			.ok_or(format!("Not exist difficulty: {:?}", header.hash()))?
+			.ok_or(format!("Difficulty does not exist: {:?}", header.hash()))?
 			.map_err(|e| format!("Unable to decode: {:?}", e))?;
 		Ok(difficulty)
 	}
