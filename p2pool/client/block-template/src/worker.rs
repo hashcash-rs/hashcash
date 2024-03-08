@@ -200,7 +200,7 @@ where
 				let _ = self.client.as_ref().insert_aux(&[(STORAGE_KEY, &res.encode()[..])], &[]);
 			},
 			Err(e) => {
-				log::warn!(target: LOG_TARGET, "Unable to get block template: {:?}", e);
+				log::warn!(target: LOG_TARGET, "Unable to get block-template: {:?}", e);
 			},
 		}
 	}

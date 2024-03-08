@@ -64,7 +64,7 @@ where
 			.ok_or(Error::Other("Unable to verify: pre-digest not set".to_string()))?
 			.map_err(|e| Error::Other(e.to_string()))?
 			.1
-			.ok_or(Error::Other("Unable to verify: block template not set".to_string()))?;
+			.ok_or(Error::Other("Unable to verify: block-template not set".to_string()))?;
 
 		let seal = match consensus::Seal::decode(&mut &seal[..]) {
 			Ok(seal) => seal,

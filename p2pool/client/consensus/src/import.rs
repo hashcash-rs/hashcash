@@ -70,20 +70,20 @@ where
 		&mut self,
 		block: BlockImportParams<B>,
 	) -> Result<ImportResult, Self::Error> {
-		if block.fork_choice == Some(ForkChoiceStrategy::Custom(true)) {
-			let block_template = find_pre_digest::<B>(&block.header)?
-				.map(|v| <(AccountId, Option<BlockTemplate>)>::decode(&mut &v[..]))
-				.ok_or(ConsensusError::ClientImport(
-					"Unable to import block: pre-digest not set".to_string(),
-				))?
-				.map_err(|e| ConsensusError::ClientImport(e.to_string()))?
-				.1
-				.ok_or(ConsensusError::ClientImport(
-					"Unable to import block: block template not set".to_string(),
-				))?;
+		let inner_seal = fetch_seal::<B>(block.post_digests.last(), block.header.hash())?;
+		let block_template = find_pre_digest::<B>(&block.header)?
+			.map(|v| <(AccountId, Option<BlockTemplate>)>::decode(&mut &v[..]))
+			.ok_or(ConsensusError::ClientImport(
+				"Unable to import block: pre-digest not set".to_string(),
+			))?
+			.map_err(|e| ConsensusError::ClientImport(e.to_string()))?
+			.1
+			.ok_or(ConsensusError::ClientImport(
+				"Unable to import block: block-template not set".to_string(),
+			))?;
 
+		if block.fork_choice == Some(ForkChoiceStrategy::Custom(true)) {
 			let mut mainchain_block = block_template.block.clone();
-			let inner_seal = fetch_seal::<B>(block.post_digests.last(), block.header.hash())?;
 			mainchain_block
 				.header
 				.digest_mut()
@@ -105,27 +105,27 @@ where
 				.client
 				.insert_aux(&[(&key[..], block.post_hash().as_bytes())], &[])
 				.map_err(|e| ConsensusError::ClientImport(e.to_string()))?;
-
-			let seal = Seal::decode(&mut &inner_seal[..])
-				.map_err(|e| ConsensusError::ClientImport(e.to_string()))?;
-			let work = randomx::calculate_hash(
-				&block_template.seed_hash,
-				(block_template.block.hash(), seal.nonce).encode().as_slice(),
-			)
-			.map_err(|_| {
-				ConsensusError::ClientImport("Failed to calculate a RandomX hash".to_string())
-			})?;
-			let difficulty: Difficulty = U256::max_value()
-				.checked_div(U256::from_big_endian(work.as_bytes()))
-				.ok_or(ConsensusError::ClientImport("Invalid RandomX hash".to_string()))?
-				.saturated_into();
-			let key: Vec<u8> =
-				P2POOL_AUX_PREFIX.iter().chain(block.post_hash().as_ref()).copied().collect();
-			let _ = self
-				.client
-				.insert_aux(&[(&key[..], &difficulty.encode()[..])], &[])
-				.map_err(|e| ConsensusError::ClientImport(e.to_string()))?;
 		}
+
+		let seal = Seal::decode(&mut &inner_seal[..])
+			.map_err(|e| ConsensusError::ClientImport(e.to_string()))?;
+		let work = randomx::calculate_hash(
+			&block_template.seed_hash,
+			(block_template.block.hash(), seal.nonce).encode().as_slice(),
+		)
+		.map_err(|_| {
+			ConsensusError::ClientImport("Failed to calculate a RandomX hash".to_string())
+		})?;
+		let difficulty: Difficulty = U256::max_value()
+			.checked_div(U256::from_big_endian(work.as_bytes()))
+			.ok_or(ConsensusError::ClientImport("Invalid RandomX hash".to_string()))?
+			.saturated_into();
+		let key: Vec<u8> =
+			P2POOL_AUX_PREFIX.iter().chain(block.post_hash().as_ref()).copied().collect();
+		let _ = self
+			.client
+			.insert_aux(&[(&key[..], &difficulty.encode()[..])], &[])
+			.map_err(|e| ConsensusError::ClientImport(e.to_string()))?;
 
 		self.inner.import_block(block).await.map_err(Into::into)
 	}
