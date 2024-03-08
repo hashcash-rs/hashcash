@@ -25,6 +25,7 @@ sc-client-api.workspace = true
 sc-consensus-pow.workspace = true
 sp-blockchain.workspace = true
 sp-consensus.workspace = true
+sp-consensus-pow = { workspace = true, features = ["std"] }
 sp-runtime.workspace = true
 
 hashcash-primitives = { workspace = true, features = ["std"] }

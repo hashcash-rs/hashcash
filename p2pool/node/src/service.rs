@@ -8,10 +8,7 @@ use hashcash::primitives::core::{opaque::Block, AccountId};
 use p2pool::{
 	client::{
 		block_template,
-		consensus::{
-			start_miner, BlockSubmitter, MinerParams, P2PoolAlgorithm, P2PoolBlockImport,
-			P2POOL_ENGINE_ID,
-		},
+		consensus::{start_miner, BlockSubmitter, MinerParams, P2PoolAlgorithm, P2PoolBlockImport},
 	},
 	runtime::RuntimeApi,
 };
@@ -155,13 +152,13 @@ impl substrate::client::consensus::pow::PreRuntimeProvider<Block> for PreRuntime
 		_best_hash: &<Block as BlockT>::Hash,
 	) -> Vec<(ConsensusEngineId, Option<Vec<u8>>)> {
 		let block_template = match self.provider.block_template() {
-			Ok(Some(block_template)) => Some(block_template.encode()),
+			Ok(Some(block_template)) => Some(block_template),
 			_ => None,
 		};
-		vec![
-			(sp_consensus_pow::POW_ENGINE_ID, block_template),
-			(P2POOL_ENGINE_ID, Some(self.author.encode())),
-		]
+		vec![(
+			sp_consensus_pow::POW_ENGINE_ID,
+			Some((self.author.clone(), block_template).encode()),
+		)]
 	}
 }
 

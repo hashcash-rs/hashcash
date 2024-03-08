@@ -6,7 +6,10 @@ use crate::preludes::*;
 use futures::{channel::mpsc, SinkExt};
 use hashcash::{
 	client::consensus::{self, randomx, MiningHandle},
-	primitives::block_template::{BlockSubmitParams, BlockTemplate},
+	primitives::{
+		block_template::{BlockSubmitParams, BlockTemplate},
+		core::AccountId,
+	},
 	randomx::{RandomXFlags, RandomXVm},
 };
 use log::*;
@@ -30,8 +33,7 @@ pub struct Miner<B: BlockT, C, H> {
 #[derive(Debug)]
 enum Error {
 	EmptyMetadata,
-	EmptyBlockTemplate,
-	InvalidBlockTemplate,
+	InvalidPreRuntime,
 	DatasetNotAllocated,
 	VmNotCreated,
 }
@@ -90,20 +92,17 @@ where
 						},
 					};
 
-					let block_template =
-						match metadata.pre_runtime.map(|v| BlockTemplate::decode(&mut &v[..])) {
-							Some(Ok(pre_runtime)) => pre_runtime,
-							Some(Err(_)) => {
-								error = Some(Error::InvalidBlockTemplate);
-								handle.reset();
-								continue;
-							},
-							None => {
-								error = Some(Error::EmptyBlockTemplate);
-								handle.reset();
-								continue;
-							},
-						};
+					let block_template = match metadata
+						.pre_runtime
+						.map(|v| <(AccountId, Option<BlockTemplate>)>::decode(&mut &v[..]))
+					{
+						Some(Ok((_, Some(block_template)))) => block_template,
+						_ => {
+							error = Some(Error::InvalidPreRuntime);
+							handle.reset();
+							continue;
+						},
+					};
 
 					if seed_hash != block_template.seed_hash {
 						seed_hash = block_template.seed_hash;

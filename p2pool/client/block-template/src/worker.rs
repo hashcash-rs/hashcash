@@ -13,7 +13,7 @@ use jsonrpsee::{
 	http_client::{HttpClient, HttpClientBuilder},
 	rpc_params,
 };
-use p2pool::client::consensus::{P2POOL_AUX_PREFIX, P2POOL_ENGINE_ID};
+use p2pool::client::consensus::P2POOL_AUX_PREFIX;
 use std::{collections::BTreeMap, sync::Arc, time::Duration};
 use substrate::{
 	client::{
@@ -23,7 +23,7 @@ use substrate::{
 	codec::{Decode, Encode},
 	primitives::{
 		blockchain::HeaderBackend,
-		consensus::{SelectChain, SyncOracle},
+		consensus::{pow::POW_ENGINE_ID, SelectChain, SyncOracle},
 		runtime::{
 			traits::{Block, Header, NumberFor, Saturating, Zero},
 			DigestItem,
@@ -159,13 +159,14 @@ where
 	fn get_author(&self, header: <B as Block>::Header) -> Result<Option<AccountId>, String> {
 		let mut author: Option<AccountId> = None;
 		for log in header.digest().logs() {
-			if let DigestItem::PreRuntime(P2POOL_ENGINE_ID, v) = log {
+			if let DigestItem::PreRuntime(POW_ENGINE_ID, v) = log {
 				if author.is_some() {
 					return Err("Multiple authors exist".to_string());
 				}
 				author = Some(
-					AccountId::decode(&mut &v[..])
-						.map_err(|e| format!("Unable to decode: {:?}", e))?,
+					<(AccountId, Option<BlockTemplate>)>::decode(&mut &v[..])
+						.map_err(|e| format!("Unable to decode: {:?}", e))?
+						.0,
 				);
 			}
 		}

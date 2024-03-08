@@ -5,7 +5,7 @@ use crate::preludes::*;
 
 use hashcash::{
 	client::consensus::{self, randomx},
-	primitives::block_template::BlockTemplate,
+	primitives::{block_template::BlockTemplate, core::AccountId},
 };
 use std::sync::Arc;
 use substrate::{
@@ -60,9 +60,11 @@ where
 		difficulty: Difficulty,
 	) -> Result<bool, Error<Block>> {
 		let block_template = pre_digest
-			.map(|v| BlockTemplate::decode(&mut &v[..]))
-			.ok_or(Error::Other("Unable to mine: pre-digest not set".to_string()))?
-			.map_err(|e| Error::Other(e.to_string()))?;
+			.map(|v| <(AccountId, Option<BlockTemplate>)>::decode(&mut &v[..]))
+			.ok_or(Error::Other("Unable to verify: pre-digest not set".to_string()))?
+			.map_err(|e| Error::Other(e.to_string()))?
+			.1
+			.ok_or(Error::Other("Unable to verify: block template not set".to_string()))?;
 
 		let seal = match consensus::Seal::decode(&mut &seal[..]) {
 			Ok(seal) => seal,

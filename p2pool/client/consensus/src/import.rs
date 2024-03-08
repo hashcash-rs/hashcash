@@ -8,7 +8,7 @@ use crate::{
 
 use hashcash::{
 	client::consensus::{randomx, Seal},
-	primitives::block_template::BlockTemplate,
+	primitives::{block_template::BlockTemplate, core::AccountId},
 };
 use std::sync::Arc;
 use substrate::{
@@ -72,9 +72,15 @@ where
 	) -> Result<ImportResult, Self::Error> {
 		if block.fork_choice == Some(ForkChoiceStrategy::Custom(true)) {
 			let block_template = find_pre_digest::<B>(&block.header)?
-				.map(|v| BlockTemplate::decode(&mut &v[..]))
-				.ok_or(ConsensusError::ClientImport("Invalid pre digest".to_string()))?
-				.map_err(|e| ConsensusError::ClientImport(e.to_string()))?;
+				.map(|v| <(AccountId, Option<BlockTemplate>)>::decode(&mut &v[..]))
+				.ok_or(ConsensusError::ClientImport(
+					"Unable to import block: pre-digest not set".to_string(),
+				))?
+				.map_err(|e| ConsensusError::ClientImport(e.to_string()))?
+				.1
+				.ok_or(ConsensusError::ClientImport(
+					"Unable to import block: block template not set".to_string(),
+				))?;
 
 			let mut mainchain_block = block_template.block.clone();
 			let inner_seal = fetch_seal::<B>(block.post_digests.last(), block.header.hash())?;
@@ -89,10 +95,10 @@ where
 				.collect();
 			if let Some(_) = self
 				.client
-				.get_aux(&key[..])
+				.get_aux(&key)
 				.map_err(|e| ConsensusError::ClientImport(e.to_string()))?
 			{
-				return Err(ConsensusError::ClientImport("Already imported".to_string()));
+				return Err(ConsensusError::ClientImport("Already imported block".to_string()));
 			}
 
 			let _ = self
