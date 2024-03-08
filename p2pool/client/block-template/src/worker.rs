@@ -190,7 +190,10 @@ where
 	async fn update_block_template(&self, shares: Vec<(AccountId, Difficulty)>) {
 		match self
 			.rpc_client
-			.request::<BlockTemplate, ArrayParams>("miner_getBlockTemplate", rpc_params!(shares))
+			.request::<BlockTemplate, ArrayParams>(
+				"miner_getBlockTemplate",
+				rpc_params!(self.author.clone(), shares),
+			)
 			.await
 		{
 			Ok(res) => {

@@ -23,7 +23,7 @@ use substrate::{
 		pow::{PowIntermediate, PreRuntimeProvider, INTERMEDIATE_KEY},
 		BlockImport, BlockImportParams, JustificationSyncLink, StateAction, StorageChanges,
 	},
-	codec::Decode,
+	codec::{Decode, Encode},
 	primitives::{
 		api::{ApiExt, CallApiAt, Core, ProvideRuntimeApi},
 		blockchain::HeaderBackend,
@@ -44,7 +44,11 @@ use substrate::{
 #[rpc(client, server)]
 pub trait MinerApi {
 	#[method(name = "miner_getBlockTemplate")]
-	fn block_template(&self, shares: Vec<(AccountId, Difficulty)>) -> Result<BlockTemplate, Error>;
+	fn block_template(
+		&self,
+		author: AccountId,
+		shares: Vec<(AccountId, Difficulty)>,
+	) -> Result<BlockTemplate, Error>;
 
 	#[method(name = "miner_submitBlock")]
 	fn submit_block(&self, block_submit_params: Bytes) -> Result<Hash, Error>;
@@ -98,6 +102,7 @@ where
 
 	pub async fn block_template_inner(
 		&self,
+		author: AccountId,
 		shares: Vec<(AccountId, Difficulty)>,
 	) -> Result<BlockTemplate, Error> {
 		if shares.is_empty() {
@@ -121,6 +126,7 @@ where
 				inherent_digest.push(DigestItem::PreRuntime(id, data));
 			}
 		}
+		inherent_digest.push(DigestItem::PreRuntime(POW_ENGINE_ID, author.encode()));
 
 		let proposer = self.proposer_factory.lock().init(&best_header).await.map_err(|e| {
 			Error::Proposer(format!(
@@ -200,8 +206,12 @@ where
 	PP: PreRuntimeProvider<Block> + Send + Sync + 'static,
 	S: SelectChain<Block> + 'static,
 {
-	fn block_template(&self, shares: Vec<(AccountId, Difficulty)>) -> Result<BlockTemplate, Error> {
-		futures::executor::block_on(self.block_template_inner(shares))
+	fn block_template(
+		&self,
+		author: AccountId,
+		shares: Vec<(AccountId, Difficulty)>,
+	) -> Result<BlockTemplate, Error> {
+		futures::executor::block_on(self.block_template_inner(author, shares))
 	}
 
 	fn submit_block(&self, block_submit_params: Bytes) -> Result<H256, Error> {
