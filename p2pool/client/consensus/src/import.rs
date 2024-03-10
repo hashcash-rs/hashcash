@@ -1,10 +1,7 @@
 // Copyright (c) Hisaishi Joe
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::{
-	preludes::{Difficulty, *},
-	P2POOL_AUX_PREFIX,
-};
+use crate::{preludes::*, P2POOL_AUX_PREFIX};
 
 use hashcash::{
 	client::consensus::{randomx, Seal},
