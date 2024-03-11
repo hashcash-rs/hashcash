@@ -11,14 +11,10 @@ pub mod substrate {
 	pub use parity_scale_codec as codec;
 	pub mod client {
 		pub use sc_client_api as api;
-		pub mod consensus {
-			pub use sc_consensus_pow as pow;
-		}
 	}
 	pub mod primitives {
 		pub use sp_blockchain as blockchain;
 		pub mod consensus {
-			pub use sp_consensus::*;
 			pub use sp_consensus_pow as pow;
 		}
 		pub use sp_runtime as runtime;

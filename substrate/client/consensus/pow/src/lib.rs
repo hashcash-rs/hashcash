@@ -651,7 +651,7 @@ where
 
 			let mut pre_runtime = None;
 
-			for (id, data) in pre_runtime_provider.pre_runtime(&best_hash) {
+			for (id, data) in pre_runtime_provider.pre_runtime(&best_hash).await {
 				if let Some(data) = data {
 					if id == POW_ENGINE_ID {
 						pre_runtime = Some(data.clone());
@@ -739,9 +739,10 @@ pub fn fetch_seal<B: BlockT>(
 }
 
 /// A trait that provides multiple pre-runtime digests for different consensus engines.
+#[async_trait::async_trait]
 pub trait PreRuntimeProvider<B: BlockT> {
 	/// Returns a set of pre-runtime digests.
-	fn pre_runtime(&self, best_hash: &B::Hash) -> Vec<(ConsensusEngineId, Option<Vec<u8>>)>;
+	async fn pre_runtime(&self, best_hash: &B::Hash) -> Vec<(ConsensusEngineId, Option<Vec<u8>>)>;
 }
 
 /// Empty pre-runtime digest provider.
@@ -756,8 +757,9 @@ impl<B> EmptyPreRuntimeProvider<B> {
 	}
 }
 
+#[async_trait::async_trait]
 impl<B: BlockT> PreRuntimeProvider<B> for EmptyPreRuntimeProvider<B> {
-	fn pre_runtime(&self, _best_hash: &B::Hash) -> Vec<(ConsensusEngineId, Option<Vec<u8>>)> {
+	async fn pre_runtime(&self, _best_hash: &B::Hash) -> Vec<(ConsensusEngineId, Option<Vec<u8>>)> {
 		Vec::new()
 	}
 }

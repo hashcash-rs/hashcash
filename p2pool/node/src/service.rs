@@ -131,30 +131,26 @@ pub fn new_partial(config: &Configuration) -> Result<Service, Error> {
 }
 
 struct PreRuntimeProvider {
-	pub _client: Arc<FullClient>,
-	provider: block_template::BlockTemplateProvider<FullClient>,
+	provider: block_template::BlockTemplateProvider<Block, FullClient>,
 	author: AccountId,
 }
 
 impl PreRuntimeProvider {
 	fn new(
-		client: Arc<FullClient>,
-		provider: block_template::BlockTemplateProvider<FullClient>,
+		provider: block_template::BlockTemplateProvider<Block, FullClient>,
 		author: AccountId,
 	) -> Self {
-		Self { _client: client, provider, author }
+		Self { provider, author }
 	}
 }
 
+#[async_trait::async_trait]
 impl substrate::client::consensus::pow::PreRuntimeProvider<Block> for PreRuntimeProvider {
-	fn pre_runtime(
+	async fn pre_runtime(
 		&self,
-		_best_hash: &<Block as BlockT>::Hash,
+		best_hash: &<Block as BlockT>::Hash,
 	) -> Vec<(ConsensusEngineId, Option<Vec<u8>>)> {
-		let block_template = match self.provider.block_template() {
-			Ok(Some(block_template)) => Some(block_template),
-			_ => None,
-		};
+		let block_template = self.provider.block_template(best_hash).await;
 		vec![(
 			sp_consensus_pow::POW_ENGINE_ID,
 			Some((self.author.clone(), block_template).encode()),
@@ -243,18 +239,14 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 		let author = options.author_id.clone().unwrap();
 		let window_size = options.window_size;
 		let genesis_hash = client.chain_info().genesis_hash;
-		let (worker, provider) = block_template::start_block_template_sync(
+		let provider = block_template::BlockTemplateProvider::new(
 			options.mainchain_rpc.clone(),
 			client.clone(),
-			select_chain.clone(),
 			author.clone(),
 			genesis_hash,
 			window_size,
-			sync_service.clone(),
-			Duration::new(10, 0),
 		)
 		.map_err(|e| Error::Other(e.to_string()))?;
-		task_manager.spawn_handle().spawn("block-template", None, worker.run());
 
 		let worker =
 			BlockSubmitter::new(options.mainchain_rpc).map_err(|e| Error::Other(e.to_string()))?;
@@ -280,7 +272,7 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 				proposer_factory,
 				sync_oracle: sync_service.clone(),
 				justification_sync_link: sync_service.clone(),
-				pre_runtime_provider: PreRuntimeProvider::new(client.clone(), provider, author),
+				pre_runtime_provider: PreRuntimeProvider::new(provider, author),
 				create_inherent_data_providers: move |_, ()| async move {
 					Ok(TimestampInherentDataProvider::from_system_time())
 				},

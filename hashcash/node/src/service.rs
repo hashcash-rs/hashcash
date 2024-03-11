@@ -63,8 +63,9 @@ struct AuthorProvider {
 	pub author: AccountId,
 }
 
+#[async_trait::async_trait]
 impl PreRuntimeProvider<Block> for AuthorProvider {
-	fn pre_runtime(&self, _best_hash: &Hash) -> Vec<(ConsensusEngineId, Option<Vec<u8>>)> {
+	async fn pre_runtime(&self, _best_hash: &Hash) -> Vec<(ConsensusEngineId, Option<Vec<u8>>)> {
 		vec![(POW_ENGINE_ID, Some(self.author.encode()))]
 	}
 }

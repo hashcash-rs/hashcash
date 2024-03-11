@@ -121,7 +121,7 @@ where
 		let _ = inherent_data.put_data(coinbase::INHERENT_IDENTIFIER, &shares);
 
 		let mut inherent_digest = Digest::default();
-		for (id, data) in self.pre_runtime_provider.pre_runtime(&best_hash) {
+		for (id, data) in self.pre_runtime_provider.pre_runtime(&best_hash).await {
 			if let Some(data) = data {
 				inherent_digest.push(DigestItem::PreRuntime(id, data));
 			}

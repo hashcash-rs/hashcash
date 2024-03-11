@@ -12,5 +12,7 @@ pub enum BlockTemplateError {
 	#[error(transparent)]
 	HttpClient(jsonrpsee::core::client::Error),
 	#[error(transparent)]
-	AuxStore(substrate::primitives::blockchain::Error),
+	Blockchain(substrate::primitives::blockchain::Error),
+	#[error("{0}")]
+	Other(String),
 }
