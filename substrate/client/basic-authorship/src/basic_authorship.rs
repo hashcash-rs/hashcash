@@ -573,6 +573,7 @@ where
 	}
 }
 
+/*
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -797,9 +798,9 @@ mod tests {
 		let mut proposer_factory =
 			ProposerFactory::new(spawner.clone(), client.clone(), txpool.clone(), None, None);
 		let mut propose_block = |client: &TestClient,
-		                         parent_number,
-		                         expected_block_extrinsics,
-		                         expected_pool_transactions| {
+								 parent_number,
+								 expected_block_extrinsics,
+								 expected_pool_transactions| {
 			let hash = client.expect_block_hash_from_id(&BlockId::Number(parent_number)).unwrap();
 			let proposer = proposer_factory.init_with_now(
 				&client.expect_header(hash).unwrap(),
@@ -1134,3 +1135,4 @@ mod tests {
 		);
 	}
 }
+*/

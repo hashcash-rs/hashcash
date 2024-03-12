@@ -3,7 +3,7 @@
 
 use crate::preludes::*;
 
-use futures::{channel::mpsc, SinkExt};
+use futures::channel::mpsc;
 use hashcash::{
 	client::consensus::{self, randomx, MiningHandle},
 	primitives::{
@@ -26,7 +26,7 @@ pub struct Miner<B: BlockT, C, H> {
 	_client: Arc<C>,
 	handle: Arc<H>,
 	nonce: Nonce,
-	submitter: mpsc::Sender<Bytes>,
+	submitter: mpsc::UnboundedSender<Bytes>,
 	_marker: std::marker::PhantomData<B>,
 }
 
@@ -43,7 +43,7 @@ where
 	C: ProvideRuntimeApi<Block> + HeaderBackend<Block> + 'static,
 	H: MiningHandle + Send + Sync + 'static,
 {
-	pub fn new(client: Arc<C>, handle: Arc<H>, submitter: mpsc::Sender<Bytes>) -> Self {
+	pub fn new(client: Arc<C>, handle: Arc<H>, submitter: mpsc::UnboundedSender<Bytes>) -> Self {
 		Miner {
 			_client: client,
 			handle,
@@ -163,14 +163,13 @@ where
 								handle.submit(seal.encode());
 
 								if consensus::check_hash(&hash, block_template.difficulty) {
-									let block_submit_params = BlockSubmitParams {
+									let params = BlockSubmitParams {
 										block: block_template.clone().block,
 										seal: seal.encode(),
+									};
+									if let Err(e) = submitter.unbounded_send(params.to_bytes()) {
+										warn!(target: LOG_TARGET, "Failed to submit block: {:?}", e);
 									}
-									.encode();
-									let _ = futures::executor::block_on(
-										submitter.clone().send(Bytes(block_submit_params)),
-									);
 								}
 							}
 							is_build_changed = false;
@@ -194,7 +193,7 @@ where
 	/// Number of threads to use for mining.
 	pub threads_count: usize,
 
-	pub submitter: mpsc::Sender<Bytes>,
+	pub submitter: mpsc::UnboundedSender<Bytes>,
 }
 
 pub fn start_miner<C, H>(params: MinerParams<C, H>)

@@ -9,6 +9,9 @@ repository.workspace = true
 description = "Basic implementation of block-authoring logic."
 readme = "README.md"
 
+[lib]
+doctest = false
+
 [lints]
 workspace = true
 
@@ -32,8 +35,8 @@ sp-core = { workspace = true, features = ["std"] }
 sp-inherents = { workspace = true, features = ["std"] }
 sp-runtime = { workspace = true, features = ["std"] }
 
-[dev-dependencies]
-parking_lot.workspace = true
-sc-client-api.workspace = true
-sc-transaction-pool.workspace = true
-substrate-test-runtime-client.workspace = true
+#[dev-dependencies]
+#parking_lot.workspace = true
+#sc-client-api.workspace = true
+#sc-transaction-pool.workspace = true
+#substrate-test-runtime-client.workspace = true

@@ -13,7 +13,7 @@ use substrate::primitives::runtime::{
 };
 
 pub use substrate::primitives::{
-	core::{H256, U256},
+	core::{Bytes, H256, U256},
 	runtime::traits::BlakeTwo256,
 };
 

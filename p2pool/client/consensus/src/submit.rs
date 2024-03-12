@@ -19,14 +19,13 @@ pub enum BlockSubmitterError {
 
 pub struct BlockSubmitter {
 	rpc_client: HttpClient,
-	pub tx: mpsc::Sender<Bytes>,
-	rx: mpsc::Receiver<Bytes>,
+	pub tx: mpsc::UnboundedSender<Bytes>,
+	rx: mpsc::UnboundedReceiver<Bytes>,
 }
 
 impl BlockSubmitter {
 	pub fn new(mainchain_rpc: String) -> Result<Self, BlockSubmitterError> {
-		// TODO: Adjust channel buffer size
-		let (tx, rx) = mpsc::channel(1024);
+		let (tx, rx) = mpsc::unbounded();
 		Ok(Self {
 			rpc_client: HttpClientBuilder::default()
 				.build(mainchain_rpc)

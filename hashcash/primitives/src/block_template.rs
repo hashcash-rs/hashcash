@@ -5,7 +5,7 @@
 
 use crate::preludes::*;
 
-use hashcash::primitives::core::{opaque::Block, Difficulty, Hash};
+use hashcash::primitives::core::{opaque::Block, Bytes, Difficulty, Hash};
 use serde::{Deserialize, Serialize};
 use substrate::codec::{Decode, Encode};
 
@@ -20,4 +20,10 @@ pub struct BlockTemplate {
 pub struct BlockSubmitParams {
 	pub block: Block,
 	pub seal: Vec<u8>,
+}
+
+impl BlockSubmitParams {
+	pub fn to_bytes(&self) -> Bytes {
+		Bytes::from(self.encode())
+	}
 }
