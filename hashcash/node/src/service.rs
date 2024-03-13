@@ -6,9 +6,10 @@ use crate::{cli::CliOptions, preludes::*};
 use futures::FutureExt;
 use hashcash::{
 	client::consensus::{inherents::coinbase::InherentDataProvider, MinerParams, RandomXAlgorithm},
-	primitives::core::{opaque::Block, AccountId, Hash},
+	primitives::core::{constants::SS58_PREFIX, opaque::Block, AccountId, Hash},
 	runtime::RuntimeApi,
 };
+use log::{info, Level};
 use parking_lot::Mutex;
 use std::{sync::Arc, time::Duration};
 use substrate::{
@@ -30,7 +31,12 @@ use substrate::{
 		transaction_pool::{api::OffchainTransactionPoolFactory, BasicPool, FullPool},
 	},
 	primitives::{
-		consensus::pow::POW_ENGINE_ID, core::Encode, io::SubstrateHostFunctions,
+		consensus::pow::POW_ENGINE_ID,
+		core::{
+			crypto::{Ss58AddressFormat, Ss58Codec},
+			Encode,
+		},
+		io::SubstrateHostFunctions,
 		runtime::ConsensusEngineId,
 		timestamp::InherentDataProvider as TimestampInherentDataProvider,
 	},
@@ -198,13 +204,15 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 		let sync_service = sync_service.clone();
 		let select_chain = select_chain.clone();
 
-		let proposer_factory = Arc::new(Mutex::new(ProposerFactory::new(
+		let mut proposer_factory = ProposerFactory::new(
 			task_manager.spawn_handle(),
 			client.clone(),
 			transaction_pool.clone(),
 			prometheus_registry.as_ref(),
 			telemetry.as_ref().map(|x| x.handle()),
-		)));
+		);
+		proposer_factory.set_log_level(Level::Trace);
+		let proposer_factory = Arc::new(Mutex::new(proposer_factory));
 
 		let proposer_factory = proposer_factory.clone();
 
@@ -280,10 +288,15 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 			.spawn_handle()
 			.spawn_blocking("pow", Some("block-authoring"), worker_task);
 
+		let author = options.author_id.unwrap();
+		info!(
+			"⚒️  Miner address is: {}",
+			author.to_ss58check_with_version(Ss58AddressFormat::custom(SS58_PREFIX))
+		);
+
 		hashcash::client::consensus::start_miner(MinerParams {
 			client,
 			handle: Arc::new(worker),
-			author: options.author_id.unwrap(),
 			threads_count: options.threads.unwrap_or(1),
 		});
 	}

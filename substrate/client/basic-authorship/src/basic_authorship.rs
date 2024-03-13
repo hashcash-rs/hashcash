@@ -26,7 +26,7 @@ use futures::{
 	future::{Future, FutureExt},
 	select,
 };
-use log::{debug, error, info, trace, warn};
+use log::{debug, error, log, trace, warn, Level};
 use parity_scale_codec::Encode;
 use sc_block_builder::{BlockBuilderApi, BlockBuilderBuilder};
 use sc_telemetry::{telemetry, TelemetryHandle, CONSENSUS_INFO};
@@ -83,6 +83,8 @@ pub struct ProposerFactory<A, C, PR> {
 	telemetry: Option<TelemetryHandle>,
 	/// When estimating the block size, should the proof be included?
 	include_proof_in_block_size_estimation: bool,
+	///
+	log_level: Level,
 	/// phantom member to pin the `ProofRecording` type.
 	_phantom: PhantomData<PR>,
 }
@@ -108,6 +110,7 @@ impl<A, C> ProposerFactory<A, C, DisableProofRecording> {
 			telemetry,
 			client,
 			include_proof_in_block_size_estimation: false,
+			log_level: Level::Info,
 			_phantom: PhantomData,
 		}
 	}
@@ -136,6 +139,7 @@ impl<A, C> ProposerFactory<A, C, EnableProofRecording> {
 			soft_deadline_percent: DEFAULT_SOFT_DEADLINE_PERCENT,
 			telemetry,
 			include_proof_in_block_size_estimation: true,
+			log_level: Level::Info,
 			_phantom: PhantomData,
 		}
 	}
@@ -173,6 +177,11 @@ impl<A, C, PR> ProposerFactory<A, C, PR> {
 	pub fn set_soft_deadline(&mut self, percent: Percent) {
 		self.soft_deadline_percent = percent;
 	}
+
+	/// Set log level of proposer factory and proposer.
+	pub fn set_log_level(&mut self, log_level: Level) {
+		self.log_level = log_level;
+	}
 }
 
 impl<Block, C, A, PR> ProposerFactory<A, C, PR>
@@ -189,7 +198,7 @@ where
 	) -> Proposer<Block, C, A, PR> {
 		let parent_hash = parent_header.hash();
 
-		info!("🙌 Starting consensus session on top of parent {:?}", parent_hash);
+		log!(self.log_level, "🙌 Starting consensus session on top of parent {:?}", parent_hash);
 
 		let proposer = Proposer::<_, _, _, PR> {
 			spawn_handle: self.spawn_handle.clone(),
@@ -204,6 +213,7 @@ where
 			telemetry: self.telemetry.clone(),
 			_phantom: PhantomData,
 			include_proof_in_block_size_estimation: self.include_proof_in_block_size_estimation,
+			log_level: self.log_level,
 		};
 
 		proposer
@@ -240,6 +250,7 @@ pub struct Proposer<Block: BlockT, C, A: TransactionPool, PR> {
 	include_proof_in_block_size_estimation: bool,
 	soft_deadline_percent: Percent,
 	telemetry: Option<TelemetryHandle>,
+	log_level: Level,
 	_phantom: PhantomData<PR>,
 }
 
@@ -556,7 +567,8 @@ where
 			)
 		};
 
-		info!(
+		log!(
+			self.log_level,
 			"🎁 Prepared block for proposing at {} ({} ms) [hash: {:?}; parent_hash: {}; {extrinsics_summary}",
 			block.header().number(),
 			block_took.as_millis(),

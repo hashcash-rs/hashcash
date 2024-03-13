@@ -21,7 +21,6 @@ pub mod substrate {
 		pub mod consensus {
 			pub use sp_consensus_pow as pow;
 		}
-		pub use sp_core as core;
 		pub use sp_inherents as inherents;
 		pub use sp_runtime as runtime;
 	}
