@@ -5,8 +5,10 @@ use crate::*;
 
 use hashcash::primitives::core::units::SECONDS;
 
+pub const MINIMUM_PERIOD: Moment = 3 * SECONDS;
+
 parameter_types! {
-	pub const MinimumPeriod: Moment = 3 * SECONDS;
+	pub const MinimumPeriod: Moment = MINIMUM_PERIOD;
 }
 
 impl substrate::pallets::timestamp::Config for Runtime {

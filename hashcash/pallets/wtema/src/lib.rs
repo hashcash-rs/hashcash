@@ -39,13 +39,17 @@ pub mod pallet {
 			+ MaxEncodedLen
 			+ TypeInfo
 			+ UniqueSaturatedFrom<U256>
-			+ Into<U256>;
+			+ Into<U256>
+			+ PartialOrd;
 
 		#[pallet::constant]
 		type TargetBlockTime: Get<Self::Moment>;
 
 		#[pallet::constant]
 		type Filter: Get<u32>;
+
+		#[pallet::constant]
+		type MinDifficulty: Get<Self::Difficulty>;
 	}
 
 	#[pallet::storage]
@@ -91,7 +95,11 @@ where
 
 		let target = (prior_target / (desired_block_time * filter))
 			.saturating_mul(desired_block_time * filter + block_time - desired_block_time);
-		let difficulty = T::Difficulty::saturated_from(U256::max_value() / target);
+		let mut difficulty = T::Difficulty::saturated_from(U256::max_value() / target);
+
+		if difficulty < T::MinDifficulty::get() {
+			difficulty = T::MinDifficulty::get();
+		}
 
 		Difficulty::<T>::put(difficulty);
 		MostRecentTimestamp::<T>::put(now);
