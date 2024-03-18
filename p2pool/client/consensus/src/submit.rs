@@ -3,33 +3,38 @@
 
 use crate::preludes::*;
 
-use futures::{channel::mpsc, StreamExt};
+use futures::stream::StreamExt;
+use hashcash::{client::api::BlockSubmitParams, primitives::core::Bytes};
 use jsonrpsee::{
 	core::{client::ClientT, params::ArrayParams},
 	http_client::{HttpClient, HttpClientBuilder},
 	rpc_params,
 };
-use substrate::primitives::core::{Bytes, H256};
+use substrate::{
+	client::utils::mpsc::{tracing_unbounded, TracingUnboundedReceiver, TracingUnboundedSender},
+	codec::Encode,
+	primitives::core::H256,
+};
 
 #[derive(Debug, thiserror::Error)]
-pub enum BlockSubmitterError {
+pub enum Error {
 	#[error(transparent)]
 	HttpClient(jsonrpsee::core::client::Error),
 }
 
-pub struct BlockSubmitter {
+pub struct BlockSubmitWorker {
 	rpc_client: HttpClient,
-	pub tx: mpsc::UnboundedSender<Bytes>,
-	rx: mpsc::UnboundedReceiver<Bytes>,
+	pub tx: TracingUnboundedSender<BlockSubmitParams<Block>>,
+	rx: TracingUnboundedReceiver<BlockSubmitParams<Block>>,
 }
 
-impl BlockSubmitter {
-	pub fn new(mainchain_rpc: String) -> Result<Self, BlockSubmitterError> {
-		let (tx, rx) = mpsc::unbounded();
+impl BlockSubmitWorker {
+	pub fn new(mainchain_rpc: String) -> Result<Self, Error> {
+		let (tx, rx) = tracing_unbounded("mpsc_block_submit", 100_000);
 		Ok(Self {
 			rpc_client: HttpClientBuilder::default()
 				.build(mainchain_rpc)
-				.map_err(BlockSubmitterError::HttpClient)?,
+				.map_err(Error::HttpClient)?,
 			tx,
 			rx,
 		})
@@ -37,16 +42,19 @@ impl BlockSubmitter {
 
 	pub async fn run(mut self) {
 		loop {
-			if let Some(block_submit_params) = self.rx.next().await {
-				self.submit_block(block_submit_params).await;
+			if let Some(BlockSubmitParams { block, seal }) = self.rx.next().await {
+				self.submit_block(block, seal).await;
 			}
 		}
 	}
 
-	async fn submit_block(&mut self, block_submit_params: Bytes) {
+	async fn submit_block(&mut self, block: Block, seal: Vec<u8>) {
 		match self
 			.rpc_client
-			.request::<H256, ArrayParams>("miner_submitBlock", rpc_params!(block_submit_params))
+			.request::<H256, ArrayParams>(
+				"miner_submitBlock",
+				rpc_params!(Bytes::from((block, seal).encode())),
+			)
 			.await
 		{
 			Ok(hash) => log::info!(target: LOG_TARGET, "📡 Block submitted: {}", hash),

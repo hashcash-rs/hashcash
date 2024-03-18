@@ -4,8 +4,10 @@
 
 use crate::{preludes::*, service::FullClient};
 use hashcash::{
-	client::consensus::inherents::coinbase,
-	primitives::core::{AccountId, Balance, Signature},
+	primitives::{
+		coinbase,
+		core::{AccountId, Balance, Signature},
+	},
 	runtime::{self, BalancesCall, SystemCall},
 };
 use substrate::{

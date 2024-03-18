@@ -4,65 +4,49 @@
 use crate::preludes::*;
 
 use hashcash::{
-	client::consensus::rpc::{Miner, MinerApiServer},
-	primitives::core::{opaque::Block, AccountId, AccountNonce, Balance, Difficulty},
+	client::{
+		miner::{
+			traits::{BlockSubmit, MinerDataBuilder},
+			MinerDataParams,
+		},
+		rpc::miner::{Miner, MinerApiServer},
+	},
+	primitives::core::{opaque::Block, AccountId, AccountNonce, Balance},
 };
 use jsonrpsee::RpcModule;
-use parking_lot::Mutex;
-use std::{error::Error, sync::Arc, time::Duration};
+use std::{error::Error, sync::Arc};
 use substrate::{
-	client::{
-		api::AuxStore,
-		consensus::{pow::PreRuntimeProvider, BlockImport, JustificationSyncLink},
-		rpc::api::DenyUnsafe,
-		transaction_pool::api::TransactionPool,
-	},
+	client::{rpc::api::DenyUnsafe, transaction_pool::api::TransactionPool},
 	frames::system::rpc::AccountNonceApi,
 	pallets::transaction_payment::rpc::TransactionPaymentRuntimeApi,
 	primitives::{
-		api::{CallApiAt, ProvideRuntimeApi},
+		api::ProvideRuntimeApi,
 		block_builder::BlockBuilder,
 		blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata},
-		consensus::{pow::DifficultyApi, Environment, Proposer, SelectChain},
-		inherents::CreateInherentDataProviders,
 	},
 };
 
-pub struct FullDeps<C, CIDP, I, L, P, PF, PP, S> {
+pub struct FullDeps<C, P, MD, BS> {
 	pub client: Arc<C>,
 	pub pool: Arc<P>,
-	pub block_import: I,
-	pub justification_sync_link: Arc<L>,
 	pub deny_unsafe: DenyUnsafe,
-	pub build_time: Duration,
-	pub create_inherent_data_providers: CIDP,
-	pub pre_runtime_provider: PP,
-	pub proposer_factory: Arc<Mutex<PF>>,
-	pub select_chain: S,
+	pub miner_data_builder: MD,
+	pub block_submit: BS,
 }
 
-pub fn create_full<C, CIDP, I, L, P, PF, PP, S>(
-	deps: FullDeps<C, CIDP, I, L, P, PF, PP, S>,
+pub fn create_full<C, P, MD, BS>(
+	deps: FullDeps<C, P, MD, BS>,
 ) -> Result<RpcModule<()>, Box<dyn Error + Send + Sync>>
 where
-	C: AuxStore,
 	C: ProvideRuntimeApi<Block>,
 	C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError> + 'static,
-	C: CallApiAt<Block>,
 	C: Send + Sync + 'static,
 	C::Api: AccountNonceApi<Block, AccountId, AccountNonce>,
 	C::Api: TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: BlockBuilder<Block>,
-	C::Api: DifficultyApi<Block, Difficulty>,
 	P: TransactionPool + 'static,
-	I: BlockImport<Block> + Send + Sync + 'static,
-	L: JustificationSyncLink<Block> + 'static,
-	CIDP: CreateInherentDataProviders<Block, ()> + 'static,
-	PF: Environment<Block> + Send + Sync + 'static,
-	PF::Error: std::fmt::Debug,
-	PF::Proposer: Proposer<Block>,
-	PP: PreRuntimeProvider<Block> + Send + Sync + 'static,
-	S: SelectChain<Block> + 'static,
+	MD: MinerDataBuilder<Params = MinerDataParams> + Send + Sync + 'static,
+	BS: BlockSubmit<Block> + Send + Sync + 'static,
 {
 	use substrate::{
 		frames::system::rpc::{System, SystemApiServer},
@@ -70,35 +54,12 @@ where
 	};
 
 	let mut module = RpcModule::new(());
-	let FullDeps {
-		client,
-		create_inherent_data_providers,
-		pool,
-		block_import,
-		justification_sync_link,
-		deny_unsafe,
-		build_time,
-		pre_runtime_provider,
-		proposer_factory,
-		select_chain,
-	} = deps;
+	let FullDeps { client, pool, deny_unsafe, miner_data_builder, block_submit } = deps;
 
 	module.merge(System::new(client.clone(), pool, deny_unsafe).into_rpc())?;
 	module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
 
-	module.merge(
-		Miner::new(
-			block_import,
-			build_time,
-			client,
-			create_inherent_data_providers,
-			justification_sync_link,
-			pre_runtime_provider,
-			proposer_factory,
-			select_chain,
-		)
-		.into_rpc(),
-	)?;
+	module.merge(Miner::new(miner_data_builder, block_submit).into_rpc())?;
 
 	Ok(module)
 }

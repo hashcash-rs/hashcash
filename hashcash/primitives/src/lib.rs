@@ -6,7 +6,6 @@
 
 mod preludes;
 
-pub mod block_template;
 pub mod coinbase;
 
 pub use hashcash_primitives_core as core;

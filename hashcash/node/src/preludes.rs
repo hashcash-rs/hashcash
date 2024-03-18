@@ -5,12 +5,11 @@ pub mod hashcash {
 	pub mod client {
 		pub mod consensus {
 			pub use hashcash_client_consensus::*;
-			pub use hashcash_client_consensus_rpc as rpc;
 		}
+		pub use hashcash_client_miner as miner;
+		pub use hashcash_client_rpc as rpc;
 	}
-	pub mod primitives {
-		pub use hashcash_primitives_core as core;
-	}
+	pub use hashcash_primitives as primitives;
 	pub use hashcash_runtime as runtime;
 }
 
@@ -54,7 +53,6 @@ pub mod substrate {
 		pub use sp_block_builder as block_builder;
 		pub use sp_blockchain as blockchain;
 		pub mod consensus {
-			pub use sp_consensus::*;
 			pub use sp_consensus_pow as pow;
 		}
 		pub use sp_core as core;

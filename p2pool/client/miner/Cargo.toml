@@ -1,5 +1,5 @@
 [package]
-name = "p2pool-client-block-template"
+name = "p2pool-client-miner"
 version = "0.0.0"
 publish = false
 authors = ["Hisaishi Joe <hisaishi@tuta.io>"]
@@ -21,11 +21,13 @@ thiserror.workspace = true
 tokio.workspace = true
 
 sc-client-api.workspace = true
+sc-utils.workspace = true
 sp-blockchain.workspace = true
 sp-consensus-pow = { workspace = true, features = ["std"] }
 sp-runtime.workspace = true
 
-hashcash-primitives = { workspace = true, features = ["std"] }
+hashcash-client-api.workspace = true
+hashcash-client-consensus.workspace = true
 hashcash-primitives-core = { workspace = true, features = ["std"] }
 
 p2pool-client-consensus.workspace = true

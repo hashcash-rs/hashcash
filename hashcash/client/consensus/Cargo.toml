@@ -24,9 +24,6 @@ parking_lot.workspace = true
 rand.workspace = true
 schnellru.workspace = true
 sc-client-api.workspace = true
-sc-consensus.workspace = true
 sc-consensus-pow.workspace = true
 sp-api = { workspace = true, features = ["std"] }
 sp-consensus-pow = { workspace = true, features = ["std"] }
-sp-inherents = { workspace = true, features = ["std"] }
-sp-runtime = { workspace = true, features = ["std"] }

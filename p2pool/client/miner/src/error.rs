@@ -6,7 +6,7 @@ use crate::preludes::*;
 use substrate::codec;
 
 #[derive(Debug, thiserror::Error)]
-pub enum BlockTemplateError {
+pub enum MinerDataError {
 	#[error(transparent)]
 	Codec(codec::Error),
 	#[error(transparent)]

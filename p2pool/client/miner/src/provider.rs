@@ -3,9 +3,9 @@
 
 use crate::{error::*, preludes::*, LOG_TARGET};
 
-use hashcash::primitives::{
-	block_template::BlockTemplate,
-	core::{AccountId, Difficulty},
+use hashcash::{
+	client::api::MinerData,
+	primitives::core::{AccountId, Difficulty},
 };
 use jsonrpsee::{
 	core::{client::ClientT, params::ArrayParams},
@@ -28,7 +28,7 @@ use substrate::{
 };
 
 #[derive(Clone)]
-pub struct BlockTemplateProvider<B: Block, C> {
+pub struct MinerDataProvider<B: Block, C> {
 	rpc_client: HttpClient,
 	client: Arc<C>,
 	author: AccountId,
@@ -36,7 +36,7 @@ pub struct BlockTemplateProvider<B: Block, C> {
 	window_size: NumberFor<B>,
 }
 
-impl<B, C> BlockTemplateProvider<B, C>
+impl<B, C> MinerDataProvider<B, C>
 where
 	B: Block,
 	C: AuxStore + BlockchainEvents<B> + HeaderBackend<B> + 'static,
@@ -47,11 +47,11 @@ where
 		author: AccountId,
 		genesis_hash: B::Hash,
 		window_size: NumberFor<B>,
-	) -> Result<Self, BlockTemplateError> {
+	) -> Result<Self, MinerDataError> {
 		Ok(Self {
 			rpc_client: HttpClientBuilder::default()
 				.build(mainchain_rpc)
-				.map_err(BlockTemplateError::HttpClient)?,
+				.map_err(MinerDataError::HttpClient)?,
 			client,
 			author,
 			genesis_hash,
@@ -59,9 +59,9 @@ where
 		})
 	}
 
-	pub async fn block_template(&self, best_hash: &B::Hash) -> Option<BlockTemplate> {
-		match self.block_template_inner(best_hash).await {
-			Ok(block_template) => Some(block_template),
+	pub async fn miner_data(&self, best_hash: &B::Hash) -> Option<MinerData> {
+		match self.miner_data_inner(best_hash).await {
+			Ok(miner_data) => Some(miner_data),
 			Err(e) => {
 				log::warn!(target: LOG_TARGET, "{:?}", e);
 				None
@@ -69,28 +69,26 @@ where
 		}
 	}
 
-	async fn block_template_inner(
-		&self,
-		best_hash: &B::Hash,
-	) -> Result<BlockTemplate, BlockTemplateError> {
+	async fn miner_data_inner(&self, best_hash: &B::Hash) -> Result<MinerData, MinerDataError> {
 		let shares = self.get_shares(best_hash).await?;
 		self.rpc_client
-			.request::<BlockTemplate, ArrayParams>(
-				"miner_getBlockTemplate",
+			.request::<MinerData, ArrayParams>(
+				"miner_getMinerData",
 				rpc_params!(self.author.clone(), shares),
 			)
 			.await
-			.map_err(BlockTemplateError::HttpClient)
+			.map_err(MinerDataError::HttpClient)
 	}
 
 	async fn get_shares(
 		&self,
 		best_hash: &B::Hash,
-	) -> Result<Vec<(AccountId, Difficulty)>, BlockTemplateError> {
-		let best_header =
-			self.client.header(*best_hash).map_err(BlockTemplateError::Blockchain)?.ok_or(
-				BlockTemplateError::Other(format!("Header does not exist: {:?}", best_hash)),
-			)?;
+	) -> Result<Vec<(AccountId, Difficulty)>, MinerDataError> {
+		let best_header = self
+			.client
+			.header(*best_hash)
+			.map_err(MinerDataError::Blockchain)?
+			.ok_or(MinerDataError::Other(format!("Header does not exist: {:?}", best_hash)))?;
 
 		let mut shares = BTreeMap::<AccountId, Difficulty>::new();
 
@@ -99,7 +97,7 @@ where
 		while current.hash() != self.genesis_hash && count < self.window_size {
 			let author = self
 				.author_of(current.clone())?
-				.ok_or(BlockTemplateError::Other("Author does not exist".to_string()))?;
+				.ok_or(MinerDataError::Other("Author does not exist".to_string()))?;
 			let difficulty = self.difficulty_of(current.clone())?;
 			match shares.get_mut(&author) {
 				Some(value) => {
@@ -130,56 +128,44 @@ where
 	fn parent_of(
 		&self,
 		header: <B as Block>::Header,
-	) -> Result<<B as Block>::Header, BlockTemplateError> {
+	) -> Result<<B as Block>::Header, MinerDataError> {
 		let parent_hash = header.parent_hash();
-		let parent = self
-			.client
-			.header(*parent_hash)
-			.map_err(BlockTemplateError::Blockchain)?
-			.ok_or(BlockTemplateError::Other(format!(
-				"Header does not exist: {:?}",
-				parent_hash
-			)))?;
+		let parent =
+			self.client.header(*parent_hash).map_err(MinerDataError::Blockchain)?.ok_or(
+				MinerDataError::Other(format!("Header does not exist: {:?}", parent_hash)),
+			)?;
 		Ok(parent)
 	}
 
-	fn author_of(
-		&self,
-		header: <B as Block>::Header,
-	) -> Result<Option<AccountId>, BlockTemplateError> {
+	fn author_of(&self, header: <B as Block>::Header) -> Result<Option<AccountId>, MinerDataError> {
 		let mut author: Option<AccountId> = None;
 		for log in header.digest().logs() {
 			if let DigestItem::PreRuntime(POW_ENGINE_ID, v) = log {
 				if author.is_some() {
-					return Err(BlockTemplateError::Other("Multiple authors exist".to_string()));
+					return Err(MinerDataError::Other("Multiple authors exist".to_string()));
 				}
 				author = Some(
-					<(AccountId, Option<BlockTemplate>)>::decode(&mut &v[..])
-						.map_err(BlockTemplateError::Codec)?
-						.0,
+					<(AccountId, MinerData)>::decode(&mut &v[..]).map_err(MinerDataError::Codec)?.0,
 				);
 			}
 		}
 		Ok(author)
 	}
 
-	fn difficulty_of(
-		&self,
-		header: <B as Block>::Header,
-	) -> Result<Difficulty, BlockTemplateError> {
+	fn difficulty_of(&self, header: <B as Block>::Header) -> Result<Difficulty, MinerDataError> {
 		let key: Vec<u8> =
 			P2POOL_AUX_PREFIX.iter().chain(header.hash().as_ref()).copied().collect();
 
 		let difficulty = self
 			.client
 			.get_aux(&key)
-			.map_err(BlockTemplateError::Blockchain)?
+			.map_err(MinerDataError::Blockchain)?
 			.map(|v| Difficulty::decode(&mut &v[..]))
-			.ok_or(BlockTemplateError::Other(format!(
+			.ok_or(MinerDataError::Other(format!(
 				"Difficulty does not exist: {:?}",
 				header.hash()
 			)))?
-			.map_err(BlockTemplateError::Codec)?;
+			.map_err(MinerDataError::Codec)?;
 		Ok(difficulty)
 	}
 }

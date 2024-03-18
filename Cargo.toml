@@ -7,8 +7,11 @@ repository = "https://github.com/hashcash-rs/hashcash.git"
 [workspace]
 resolver = "2"
 members = [
+  "hashcash/client/api",
   "hashcash/client/consensus",
-  "hashcash/client/consensus/rpc",
+  "hashcash/client/miner",
+  "hashcash/client/miner-worker",
+  "hashcash/client/rpc",
   "hashcash/node",
   "hashcash/pallets/coinbase",
   "hashcash/pallets/wtema",
@@ -16,8 +19,8 @@ members = [
   "hashcash/primitives/core",
   "hashcash/randomx",
   "hashcash/runtime",
-  "p2pool/client/block-template",
   "p2pool/client/consensus",
+  "p2pool/client/miner",
   "p2pool/node",
   "p2pool/runtime",
   "substrate/client/basic-authorship",
@@ -103,6 +106,7 @@ sc-service = { git = "https://github.com/paritytech/polkadot-sdk", branch = "rel
 sc-telemetry = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.8.0" }
 sc-transaction-pool = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.8.0" }
 sc-transaction-pool-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.8.0" }
+sc-utils = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.8.0" }
 
 sp-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.8.0", default-features = false }
 sp-block-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.8.0", default-features = false }
@@ -129,16 +133,19 @@ substrate-prometheus-endpoint = { git = "https://github.com/paritytech/polkadot-
 #substrate-test-runtime-client = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.8.0" }
 substrate-wasm-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.8.0" }
 
+hashcash-client-api = { path = "hashcash/client/api" }
 hashcash-client-consensus = { path = "hashcash/client/consensus" }
-hashcash-client-consensus-rpc = { path = "hashcash/client/consensus/rpc" }
+hashcash-client-miner = { path = "hashcash/client/miner" }
+hashcash-client-miner-worker = { path = "hashcash/client/miner-worker" }
+hashcash-client-rpc = { path = "hashcash/client/rpc" }
 hashcash-primitives = { path = "hashcash/primitives", default-features = false }
 hashcash-primitives-core = { path = "hashcash/primitives/core", default-features = false }
 hashcash-randomx = { path = "hashcash/randomx" }
 hashcash-runtime = { path = "hashcash/runtime", default-features = false }
 pallet-coinbase = { path = "hashcash/pallets/coinbase", default-features = false }
 pallet-wtema = { path = "hashcash/pallets/wtema", default-features = false }
-p2pool-client-block-template = { path = "p2pool/client/block-template" }
 p2pool-client-consensus = { path = "p2pool/client/consensus" }
+p2pool-client-miner = { path = "p2pool/client/miner" }
 p2pool-runtime = { path = "p2pool/runtime", default-features = false }
 
 [profile.release]

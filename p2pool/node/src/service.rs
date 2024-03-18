@@ -4,11 +4,14 @@
 use crate::{cli::CliOptions, preludes::*};
 
 use futures::FutureExt;
-use hashcash::primitives::core::{opaque::Block, AccountId};
+use hashcash::{
+	client::miner::worker::MiningWorker,
+	primitives::core::{opaque::Block, AccountId},
+};
 use p2pool::{
 	client::{
-		block_template,
-		consensus::{start_miner, BlockSubmitter, MinerParams, P2PoolAlgorithm, P2PoolBlockImport},
+		consensus::{BlockSubmitWorker, P2PoolAlgorithm, P2PoolBlockImport},
+		miner::{MinerDataProvider, MiningWorkerBackend},
 	},
 	runtime::RuntimeApi,
 };
@@ -18,7 +21,7 @@ use substrate::{
 		api::Backend,
 		basic_authorship::ProposerFactory,
 		consensus::{
-			pow::{ImportQueueParams, PowBlockImport, PowParams},
+			pow::{Error as PowError, ImportQueueParams, PowBlockImport, PowParams},
 			DefaultImportQueue, LongestChain,
 		},
 		executor::WasmExecutor,
@@ -131,15 +134,12 @@ pub fn new_partial(config: &Configuration) -> Result<Service, Error> {
 }
 
 struct PreRuntimeProvider {
-	provider: block_template::BlockTemplateProvider<Block, FullClient>,
+	provider: MinerDataProvider<Block, FullClient>,
 	author: AccountId,
 }
 
 impl PreRuntimeProvider {
-	fn new(
-		provider: block_template::BlockTemplateProvider<Block, FullClient>,
-		author: AccountId,
-	) -> Self {
+	fn new(provider: MinerDataProvider<Block, FullClient>, author: AccountId) -> Self {
 		Self { provider, author }
 	}
 }
@@ -149,12 +149,14 @@ impl substrate::client::consensus::pow::PreRuntimeProvider<Block> for PreRuntime
 	async fn pre_runtime(
 		&self,
 		best_hash: &<Block as BlockT>::Hash,
-	) -> Vec<(ConsensusEngineId, Option<Vec<u8>>)> {
-		let block_template = self.provider.block_template(best_hash).await;
-		vec![(
-			sp_consensus_pow::POW_ENGINE_ID,
-			Some((self.author.clone(), block_template).encode()),
-		)]
+	) -> Result<Vec<(ConsensusEngineId, Vec<u8>)>, PowError<Block>> {
+		match self.provider.miner_data(best_hash).await {
+			Some(miner_data) => Ok(vec![(
+				sp_consensus_pow::POW_ENGINE_ID,
+				(self.author.clone(), miner_data).encode(),
+			)]),
+			None => Err(PowError::Other("Block template not found".to_string())),
+		}
 	}
 }
 
@@ -239,7 +241,7 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 		let author = options.author_id.clone().unwrap();
 		let window_size = options.window_size;
 		let genesis_hash = client.chain_info().genesis_hash;
-		let provider = block_template::BlockTemplateProvider::new(
+		let provider = MinerDataProvider::new(
 			options.mainchain_rpc.clone(),
 			client.clone(),
 			author.clone(),
@@ -248,10 +250,10 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 		)
 		.map_err(|e| Error::Other(e.to_string()))?;
 
-		let worker =
-			BlockSubmitter::new(options.mainchain_rpc).map_err(|e| Error::Other(e.to_string()))?;
-		let submitter = worker.tx.clone();
-		task_manager.spawn_handle().spawn("block-submitter", None, worker.run());
+		let worker = BlockSubmitWorker::new(options.mainchain_rpc)
+			.map_err(|e| Error::Other(e.to_string()))?;
+		let submit = worker.tx.clone();
+		task_manager.spawn_handle().spawn("block-submit", None, worker.run());
 
 		let algorithm = P2PoolAlgorithm::new(client.clone());
 
@@ -263,7 +265,7 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 			telemetry.as_ref().map(|x| x.handle()),
 		);
 
-		let (worker, worker_task) =
+		let (mining_handle, mining_handle_task) =
 			substrate::client::consensus::pow::start_mining_worker(PowParams {
 				client: client.clone(),
 				select_chain,
@@ -280,16 +282,15 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 				build_time: Duration::new(10, 0),
 			});
 
-		task_manager
-			.spawn_handle()
-			.spawn_blocking("pow", Some("block-authoring"), worker_task);
+		task_manager.spawn_handle().spawn_blocking(
+			"pow",
+			Some("block-authoring"),
+			mining_handle_task,
+		);
 
-		start_miner(MinerParams {
-			client,
-			handle: Arc::new(worker),
-			threads_count: options.threads.unwrap_or(1),
-			submitter,
-		});
+		let worker =
+			MiningWorker::new(MiningWorkerBackend::new(client, Arc::new(mining_handle), submit));
+		worker.start(options.threads.unwrap_or(1));
 	}
 
 	network_starter.start_network();

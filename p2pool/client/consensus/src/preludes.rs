@@ -5,15 +5,14 @@ pub const LOG_TARGET: &str = "consensus";
 
 pub mod hashcash {
 	pub mod client {
+		pub use hashcash_client_api as api;
 		pub mod consensus {
 			pub use hashcash_client_consensus::*;
 		}
 	}
 	pub mod primitives {
-		pub use hashcash_primitives::*;
 		pub use hashcash_primitives_core as core;
 	}
-	pub use hashcash_randomx as randomx;
 }
 
 pub mod substrate {
@@ -23,6 +22,7 @@ pub mod substrate {
 			pub use sc_consensus::*;
 			pub use sc_consensus_pow as pow;
 		}
+		pub use sc_utils as utils;
 	}
 	pub mod primitives {
 		pub use sp_api as api;
@@ -38,5 +38,5 @@ pub mod substrate {
 
 pub use hashcash::primitives::core::{
 	opaque::{Block, BlockId},
-	Difficulty, Hash, Nonce,
+	Difficulty, Hash,
 };

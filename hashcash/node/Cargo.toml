@@ -44,7 +44,6 @@ sc-transaction-pool-api.workspace = true
 sp-api = { workspace = true, features = ["std"] }
 sp-block-builder = { workspace = true, features = ["std"] }
 sp-blockchain.workspace = true
-sp-consensus.workspace = true
 sp-consensus-pow = { workspace = true, features = ["std"] }
 sp-core.workspace = true
 sp-inherents = { workspace = true, features = ["std"] }
@@ -56,8 +55,9 @@ sp-timestamp = { workspace = true, features = ["std"] }
 substrate-frame-rpc-system.workspace = true
 
 hashcash-client-consensus.workspace = true
-hashcash-client-consensus-rpc.workspace = true
-hashcash-primitives-core = { workspace = true, features = ["std"] }
+hashcash-client-miner.workspace = true
+hashcash-client-rpc.workspace = true
+hashcash-primitives = { workspace = true, features = ["std"] }
 hashcash-runtime = { workspace = true, features = ["std"] }
 
 [build-dependencies]

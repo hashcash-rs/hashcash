@@ -4,8 +4,11 @@
 use crate::preludes::*;
 
 use hashcash::{
-	client::consensus::{self, randomx},
-	primitives::{block_template::BlockTemplate, core::AccountId},
+	client::{
+		api::MinerData,
+		consensus::{self, randomx},
+	},
+	primitives::core::AccountId,
 };
 use std::sync::Arc;
 use substrate::{
@@ -59,12 +62,11 @@ where
 		seal: &Seal,
 		difficulty: Difficulty,
 	) -> Result<bool, Error<Block>> {
-		let block_template = pre_digest
-			.map(|v| <(AccountId, Option<BlockTemplate>)>::decode(&mut &v[..]))
+		let miner_data = pre_digest
+			.map(|v| <(AccountId, MinerData)>::decode(&mut &v[..]))
 			.ok_or(Error::Other("Unable to verify: pre-digest not set".to_string()))?
 			.map_err(|e| Error::Other(e.to_string()))?
-			.1
-			.ok_or(Error::Other("Unable to verify: block-template not set".to_string()))?;
+			.1;
 
 		let seal = match consensus::Seal::decode(&mut &seal[..]) {
 			Ok(seal) => seal,
@@ -72,8 +74,8 @@ where
 		};
 
 		let work = randomx::calculate_hash(
-			&block_template.seed_hash,
-			(block_template.block.hash(), seal.nonce).encode().as_slice(),
+			&miner_data.seed_hash,
+			(miner_data.block.hash(), seal.nonce).encode().as_slice(),
 		)
 		.map_err(|_| Error::Environment("Failed to calculate a RandomX hash".to_string()))?;
 

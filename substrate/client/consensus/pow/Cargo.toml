@@ -1,6 +1,6 @@
 [package]
 name = "sc-consensus-pow"
-version = "0.10.0-dev"
+version = "0.33.0"
 publish = false
 authors = ["Parity Technologies <admin@parity.io>"]
 description = "PoW consensus algorithm for substrate"

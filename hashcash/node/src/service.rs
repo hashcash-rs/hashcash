@@ -5,8 +5,17 @@ use crate::{cli::CliOptions, preludes::*};
 
 use futures::FutureExt;
 use hashcash::{
-	client::consensus::{inherents::coinbase::InherentDataProvider, MinerParams, RandomXAlgorithm},
-	primitives::core::{constants::SS58_PREFIX, opaque::Block, AccountId, Hash},
+	client::{
+		consensus::RandomXAlgorithm,
+		miner::{
+			BlockSubmit, MinerDataBuilder, MinerDataBuilderParams, MiningWorker,
+			MiningWorkerBackend,
+		},
+	},
+	primitives::{
+		coinbase::InherentDataProvider as CoinbaseInherentDataProvider,
+		core::{constants::SS58_PREFIX, opaque::Block, AccountId, Hash},
+	},
 	runtime::RuntimeApi,
 };
 use log::{info, Level};
@@ -18,8 +27,8 @@ use substrate::{
 		basic_authorship::ProposerFactory,
 		consensus::{
 			pow::{
-				EmptyPreRuntimeProvider, ImportQueueParams, PowBlockImport, PowParams,
-				PreRuntimeProvider,
+				EmptyPreRuntimeProvider, Error as PowError, ImportQueueParams, PowBlockImport,
+				PowParams, PreRuntimeProvider,
 			},
 			DefaultImportQueue, LongestChain,
 		},
@@ -71,8 +80,11 @@ struct AuthorProvider {
 
 #[async_trait::async_trait]
 impl PreRuntimeProvider<Block> for AuthorProvider {
-	async fn pre_runtime(&self, _best_hash: &Hash) -> Vec<(ConsensusEngineId, Option<Vec<u8>>)> {
-		vec![(POW_ENGINE_ID, Some(self.author.encode()))]
+	async fn pre_runtime(
+		&self,
+		_best_hash: &Hash,
+	) -> Result<Vec<(ConsensusEngineId, Vec<u8>)>, PowError<Block>> {
+		Ok(vec![(POW_ENGINE_ID, self.author.encode())])
 	}
 }
 
@@ -212,24 +224,29 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 			telemetry.as_ref().map(|x| x.handle()),
 		);
 		proposer_factory.set_log_level(Level::Trace);
+
 		let proposer_factory = Arc::new(Mutex::new(proposer_factory));
 
-		let proposer_factory = proposer_factory.clone();
-
 		Box::new(move |deny_unsafe, _| {
-			let deps = crate::rpc::FullDeps {
+			let miner_data_builder = MinerDataBuilder::new(MinerDataBuilderParams {
 				client: client.clone(),
-				pool: pool.clone(),
-				block_import: block_import.clone(),
-				justification_sync_link: sync_service.clone(),
-				deny_unsafe,
-				build_time: Duration::new(10, 0),
 				create_inherent_data_providers: move |_, ()| async move {
 					Ok(TimestampInherentDataProvider::from_system_time())
 				},
 				pre_runtime_provider: EmptyPreRuntimeProvider::<Block>::new(),
 				proposer_factory: proposer_factory.clone(),
 				select_chain: select_chain.clone(),
+				build_time: Duration::new(10, 0),
+			});
+			let block_submit =
+				BlockSubmit::new(client.clone(), block_import.clone(), sync_service.clone());
+
+			let deps = crate::rpc::FullDeps {
+				client: client.clone(),
+				pool: pool.clone(),
+				deny_unsafe,
+				miner_data_builder,
+				block_submit,
 			};
 			crate::rpc::create_full(deps).map_err(Into::into)
 		})
@@ -262,7 +279,7 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 		);
 
 		let author = options.author_id.clone().unwrap();
-		let (worker, worker_task) =
+		let (mining_handle, mining_handle_task) =
 			substrate::client::consensus::pow::start_mining_worker(PowParams {
 				client: client.clone(),
 				select_chain,
@@ -275,7 +292,7 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 				create_inherent_data_providers: move |_, ()| {
 					let author = author.clone();
 					async move {
-						let coinbase = InherentDataProvider::new(author);
+						let coinbase = CoinbaseInherentDataProvider::new(author);
 						let timestamp = TimestampInherentDataProvider::from_system_time();
 						Ok((coinbase, timestamp))
 					}
@@ -284,9 +301,11 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 				build_time: Duration::new(10, 0),
 			});
 
-		task_manager
-			.spawn_handle()
-			.spawn_blocking("pow", Some("block-authoring"), worker_task);
+		task_manager.spawn_handle().spawn_blocking(
+			"pow",
+			Some("block-authoring"),
+			mining_handle_task,
+		);
 
 		let author = options.author_id.unwrap();
 		info!(
@@ -294,11 +313,9 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 			author.to_ss58check_with_version(Ss58AddressFormat::custom(SS58_PREFIX))
 		);
 
-		hashcash::client::consensus::start_miner(MinerParams {
-			client,
-			handle: Arc::new(worker),
-			threads_count: options.threads.unwrap_or(1),
-		});
+		let worker =
+			MiningWorker::new(MiningWorkerBackend::new(client.clone(), Arc::new(mining_handle)));
+		worker.start(options.threads.unwrap_or(1));
 	}
 
 	network_starter.start_network();

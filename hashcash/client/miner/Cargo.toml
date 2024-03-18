@@ -1,8 +1,8 @@
 [package]
-name = "p2pool-client-consensus"
+name = "hashcash-client-miner"
 version = "0.0.0"
 publish = false
-authors = ["Hisaishi Joe <hisaishi@tuta.io>"]
+authors.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
@@ -15,24 +15,23 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 async-trait.workspace = true
-futures.workspace = true
-jsonrpsee = { workspace = true, features = ["http-client"] }
+hashcash-client-api.workspace = true
+hashcash-client-consensus.workspace = true
+hashcash-client-miner-worker.workspace = true
+hashcash-primitives = { workspace = true, features = ["std"] }
 log.workspace = true
 parity-scale-codec = { workspace = true, features = ["std"] }
-parking_lot.workspace = true
+parking_lot = { workspace = true, features = ["send_guard"] }
 rand.workspace = true
-thiserror.workspace = true
-
+schnellru.workspace = true
 sc-client-api.workspace = true
 sc-consensus.workspace = true
 sc-consensus-pow.workspace = true
-sc-utils.workspace = true
+serde = { workspace = true, features = ["std"] }
 sp-api = { workspace = true, features = ["std"] }
-sp-core = { workspace = true, features = ["std"] }
+sp-blockchain.workspace = true
 sp-consensus.workspace = true
 sp-consensus-pow = { workspace = true, features = ["std"] }
+sp-inherents.workspace = true
 sp-runtime = { workspace = true, features = ["std"] }
-
-hashcash-client-api.workspace = true
-hashcash-client-consensus.workspace = true
-hashcash-primitives-core = { workspace = true, features = ["std"] }
+thiserror.workspace = true

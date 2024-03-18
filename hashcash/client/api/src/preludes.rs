@@ -1,15 +1,12 @@
-// Copyright (c) Hisaishi Joe
+// Copyright (c) Ryuichi Sakamoto
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 pub mod hashcash {
-	pub mod client {
-		pub use hashcash_client_consensus as consensus;
-	}
 	pub mod primitives {
-		pub use hashcash_primitives::*;
 		pub use hashcash_primitives_core as core;
 	}
 }
+
 pub mod substrate {
 	pub mod client {
 		pub mod consensus {
@@ -17,16 +14,11 @@ pub mod substrate {
 			pub use sc_consensus_pow as pow;
 		}
 	}
+	pub use parity_scale_codec as codec;
 	pub mod primitives {
-		pub use sp_api as api;
-		pub use sp_blockchain as blockchain;
 		pub mod consensus {
-			pub use sp_consensus::*;
 			pub use sp_consensus_pow as pow;
 		}
-		pub use sp_core as core;
-		pub use sp_inherents as inherents;
 		pub use sp_runtime as runtime;
 	}
-	pub use parity_scale_codec as codec;
 }

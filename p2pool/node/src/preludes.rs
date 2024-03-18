@@ -2,6 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 pub mod hashcash {
+	pub mod client {
+		pub mod miner {
+			pub use hashcash_client_miner_worker as worker;
+		}
+	}
 	pub mod primitives {
 		pub use hashcash_primitives_core as core;
 	}
@@ -10,8 +15,8 @@ pub mod hashcash {
 pub mod p2pool {
 	pub use p2pool_runtime as runtime;
 	pub mod client {
-		pub use p2pool_client_block_template as block_template;
 		pub use p2pool_client_consensus as consensus;
+		pub use p2pool_client_miner as miner;
 	}
 }
 

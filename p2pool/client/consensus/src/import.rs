@@ -4,8 +4,11 @@
 use crate::{preludes::*, P2POOL_AUX_PREFIX};
 
 use hashcash::{
-	client::consensus::{randomx, Seal},
-	primitives::{block_template::BlockTemplate, core::AccountId},
+	client::{
+		api::MinerData,
+		consensus::{randomx, Seal},
+	},
+	primitives::core::AccountId,
 };
 use std::sync::Arc;
 use substrate::{
@@ -68,19 +71,16 @@ where
 		block: BlockImportParams<B>,
 	) -> Result<ImportResult, Self::Error> {
 		let inner_seal = fetch_seal::<B>(block.post_digests.last(), block.header.hash())?;
-		let block_template = find_pre_digest::<B>(&block.header)?
-			.map(|v| <(AccountId, Option<BlockTemplate>)>::decode(&mut &v[..]))
+		let miner_data = find_pre_digest::<B>(&block.header)?
+			.map(|v| <(AccountId, MinerData)>::decode(&mut &v[..]))
 			.ok_or(ConsensusError::ClientImport(
 				"Unable to import block: pre-digest not set".to_string(),
 			))?
 			.map_err(|e| ConsensusError::ClientImport(e.to_string()))?
-			.1
-			.ok_or(ConsensusError::ClientImport(
-				"Unable to import block: block-template not set".to_string(),
-			))?;
+			.1;
 
 		if block.fork_choice == Some(ForkChoiceStrategy::Custom(true)) {
-			let mut mainchain_block = block_template.block.clone();
+			let mut mainchain_block = miner_data.block.clone();
 			mainchain_block
 				.header
 				.digest_mut()
@@ -107,8 +107,8 @@ where
 		let seal = Seal::decode(&mut &inner_seal[..])
 			.map_err(|e| ConsensusError::ClientImport(e.to_string()))?;
 		let work = randomx::calculate_hash(
-			&block_template.seed_hash,
-			(block_template.block.hash(), seal.nonce).encode().as_slice(),
+			&miner_data.seed_hash,
+			(miner_data.block.hash(), seal.nonce).encode().as_slice(),
 		)
 		.map_err(|_| {
 			ConsensusError::ClientImport("Failed to calculate a RandomX hash".to_string())

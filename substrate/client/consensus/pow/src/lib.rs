@@ -648,16 +648,24 @@ where
 			};
 
 			let mut inherent_digest = Digest::default();
-
 			let mut pre_runtime = None;
 
-			for (id, data) in pre_runtime_provider.pre_runtime(&best_hash).await {
-				if let Some(data) = data {
-					if id == POW_ENGINE_ID {
-						pre_runtime = Some(data.clone());
-					}
-					inherent_digest.push(DigestItem::PreRuntime(id, data));
-				}
+			match pre_runtime_provider.pre_runtime(&best_hash).await {
+				Ok(pre_runtimes) =>
+					for (id, data) in pre_runtimes {
+						if id == POW_ENGINE_ID {
+							pre_runtime = Some(data.clone());
+						}
+						inherent_digest.push(DigestItem::PreRuntime(id, data));
+					},
+				Err(e) => {
+					warn!(
+						target: LOG_TARGET,
+						"Invalid pre-runtime digest: {}",
+						e,
+					);
+					continue
+				},
 			}
 
 			let proposer = match proposer_factory.init(&best_header).await {
@@ -742,7 +750,10 @@ pub fn fetch_seal<B: BlockT>(
 #[async_trait::async_trait]
 pub trait PreRuntimeProvider<B: BlockT> {
 	/// Returns a set of pre-runtime digests.
-	async fn pre_runtime(&self, best_hash: &B::Hash) -> Vec<(ConsensusEngineId, Option<Vec<u8>>)>;
+	async fn pre_runtime(
+		&self,
+		best_hash: &B::Hash,
+	) -> Result<Vec<(ConsensusEngineId, Vec<u8>)>, Error<B>>;
 }
 
 /// Empty pre-runtime digest provider.
@@ -759,7 +770,10 @@ impl<B> EmptyPreRuntimeProvider<B> {
 
 #[async_trait::async_trait]
 impl<B: BlockT> PreRuntimeProvider<B> for EmptyPreRuntimeProvider<B> {
-	async fn pre_runtime(&self, _best_hash: &B::Hash) -> Vec<(ConsensusEngineId, Option<Vec<u8>>)> {
-		Vec::new()
+	async fn pre_runtime(
+		&self,
+		_best_hash: &B::Hash,
+	) -> Result<Vec<(ConsensusEngineId, Vec<u8>)>, Error<B>> {
+		Ok(Vec::new())
 	}
 }
