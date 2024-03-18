@@ -2,7 +2,7 @@
 name = "p2pool-runtime"
 version = "0.0.0"
 publish = false
-authors = ["Hisaishi Joe <hisaishi@tuta.io>"]
+authors.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

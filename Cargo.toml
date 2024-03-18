@@ -1,5 +1,5 @@
 [workspace.package]
-authors = ["Ryuichi Sakamoto <ryuichi@tuta.io>"]
+authors = ["The Hashcash Authors"]
 edition = "2021"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/hashcash-rs/hashcash.git"
