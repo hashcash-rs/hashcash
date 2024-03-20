@@ -4,6 +4,8 @@
 mod preludes;
 use preludes::*;
 
+pub mod consensus;
+
 pub use hashcash::primitives::core::{opaque::Block, Difficulty, Hash};
 pub use substrate::{client::consensus::pow::Version, primitives::consensus::pow::Seal};
 

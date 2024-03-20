@@ -3,6 +3,10 @@
 
 use crate::preludes::*;
 
+pub use hashcash::primitives::core::{
+	opaque::{Block, BlockId},
+	BlockNumber, Difficulty, Hash, Nonce, U256,
+};
 use std::sync::Arc;
 use substrate::{
 	client::{api::HeaderBackend, consensus::pow::Error},

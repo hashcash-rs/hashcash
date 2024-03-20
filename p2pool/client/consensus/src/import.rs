@@ -5,10 +5,10 @@ use crate::{preludes::*, P2POOL_AUX_PREFIX};
 
 use hashcash::{
 	client::{
-		api::MinerData,
-		consensus::{randomx, Seal},
+		api::{consensus::Seal, MinerData},
+		randomx,
 	},
-	primitives::core::AccountId,
+	primitives::core::{AccountId, H256, U256},
 };
 use std::sync::Arc;
 use substrate::{
@@ -22,7 +22,6 @@ use substrate::{
 	codec::{Decode, Encode},
 	primitives::{
 		consensus::{pow::POW_ENGINE_ID, Error as ConsensusError},
-		core::{H256, U256},
 		runtime::{
 			traits::{Block, Header},
 			DigestItem, SaturatedConversion,

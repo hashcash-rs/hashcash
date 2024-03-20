@@ -5,7 +5,7 @@ use crate::preludes::*;
 
 pub use hashcash::client::api::MinerData;
 
-use hashcash::{client::consensus, primitives::coinbase};
+use hashcash::{client::api::consensus, primitives::coinbase};
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use std::{sync::Arc, time::Duration};

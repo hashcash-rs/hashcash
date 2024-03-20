@@ -3,10 +3,7 @@
 
 use crate::preludes::*;
 
-use hashcash::client::{
-	api::{self, MiningHandle, MiningMetadata, Seal, Version},
-	consensus,
-};
+use hashcash::client::api::{self, consensus, MiningHandle, MiningMetadata, Seal, Version};
 use std::sync::Arc;
 use substrate::client::api::HeaderBackend;
 

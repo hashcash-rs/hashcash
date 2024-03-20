@@ -6,9 +6,7 @@ pub const LOG_TARGET: &str = "consensus";
 pub mod hashcash {
 	pub mod client {
 		pub use hashcash_client_api as api;
-		pub mod consensus {
-			pub use hashcash_client_consensus::*;
-		}
+		pub use hashcash_client_randomx as randomx;
 	}
 	pub mod primitives {
 		pub use hashcash_primitives_core as core;
@@ -26,7 +24,6 @@ pub mod substrate {
 	}
 	pub mod primitives {
 		pub use sp_api as api;
-		pub use sp_core as core;
 		pub mod consensus {
 			pub use sp_consensus::*;
 			pub use sp_consensus_pow as pow;

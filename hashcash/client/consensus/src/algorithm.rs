@@ -1,8 +1,9 @@
 // Copyright (c) Ryuichi Sakamoto
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::{common, preludes::*, randomx};
+use crate::preludes::*;
 
+use hashcash::client::{api::consensus as common, randomx};
 use std::sync::Arc;
 use substrate::{
 	client::{

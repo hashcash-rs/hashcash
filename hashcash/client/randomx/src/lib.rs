@@ -1,9 +1,10 @@
 // Copyright (c) Ryuichi Sakamoto
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::preludes::*;
+mod preludes;
+use preludes::*;
 
-use hashcash::randomx::{
+pub use hashcash::randomx::{
 	Error as RandomXError, RandomXCache, RandomXDataset, RandomXFlags, RandomXVm,
 };
 use parking_lot::Mutex;

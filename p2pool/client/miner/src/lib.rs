@@ -6,7 +6,5 @@ mod error;
 mod preludes;
 mod provider;
 
-pub const LOG_TARGET: &str = "miner-data";
-
 pub use backend::MiningWorkerBackend;
 pub use provider::MinerDataProvider;

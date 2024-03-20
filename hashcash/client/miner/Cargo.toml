@@ -16,14 +16,11 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 async-trait.workspace = true
 hashcash-client-api.workspace = true
-hashcash-client-consensus.workspace = true
 hashcash-client-miner-worker.workspace = true
 hashcash-primitives = { workspace = true, features = ["std"] }
 log.workspace = true
 parity-scale-codec = { workspace = true, features = ["std"] }
 parking_lot = { workspace = true, features = ["send_guard"] }
-rand.workspace = true
-schnellru.workspace = true
 sc-client-api.workspace = true
 sc-consensus.workspace = true
 sc-consensus-pow.workspace = true
