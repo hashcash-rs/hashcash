@@ -6,7 +6,9 @@ pub mod hashcash {
 		pub use hashcash_client_api as api;
 		pub use hashcash_client_randomx as randomx;
 	}
-	pub use hashcash_primitives as primitives;
+	pub mod primitives {
+		pub use hashcash_primitives_core as core;
+	}
 }
 
 pub mod substrate {

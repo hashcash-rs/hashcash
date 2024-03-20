@@ -1,7 +1,7 @@
 // Copyright (c) Hisaishi Joe
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::{error::*, preludes::*, LOG_TARGET};
+use crate::{error::*, preludes::*};
 
 use hashcash::{
 	client::api::MinerData,
@@ -26,6 +26,8 @@ use substrate::{
 		},
 	},
 };
+
+const LOG_TARGET: &str = "miner-data";
 
 #[derive(Clone)]
 pub struct MinerDataProvider<B: Block, C> {

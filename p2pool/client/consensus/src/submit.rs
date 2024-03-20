@@ -4,7 +4,10 @@
 use crate::preludes::*;
 
 use futures::stream::StreamExt;
-use hashcash::{client::api::BlockSubmitParams, primitives::core::Bytes};
+use hashcash::{
+	client::api::BlockSubmitParams,
+	primitives::core::{Bytes, H256},
+};
 use jsonrpsee::{
 	core::{client::ClientT, params::ArrayParams},
 	http_client::{HttpClient, HttpClientBuilder},
@@ -13,7 +16,6 @@ use jsonrpsee::{
 use substrate::{
 	client::utils::mpsc::{tracing_unbounded, TracingUnboundedReceiver, TracingUnboundedSender},
 	codec::Encode,
-	primitives::core::H256,
 };
 
 #[derive(Debug, thiserror::Error)]

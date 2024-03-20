@@ -16,21 +16,8 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 futures.workspace = true
 jsonrpsee = { workspace = true, features = ["client-core", "macros", "server"] }
-parking_lot.workspace = true
 parity-scale-codec = { workspace = true, features = ["std", "derive"] }
 thiserror.workspace = true
 
-sc-consensus-pow.workspace = true
-sp-api = { workspace = true, features = ["std"] }
-sp-blockchain.workspace = true
-sp-consensus.workspace = true
-sp-consensus-pow = { workspace = true, features = ["std"] }
-sp-core = { workspace = true, features = ["std"] }
-sp-inherents = { workspace = true, features = ["std"] }
-sp-runtime = { workspace = true, features = ["std"] }
-
-hashcash-client-api.workspace = true
-hashcash-client-consensus.workspace = true
 hashcash-client-miner.workspace = true
-hashcash-primitives = { workspace = true, features = ["std"] }
 hashcash-primitives-core = { workspace = true, features = ["std"] }

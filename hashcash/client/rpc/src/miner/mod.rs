@@ -7,20 +7,14 @@ mod error;
 use error::Error;
 
 use hashcash::{
-	client::{
-		api::BlockSubmitParams,
-		miner::{
-			traits::{BlockSubmit, MinerDataBuilder},
-			MinerData, MinerDataParams,
-		},
+	client::miner::{
+		traits::{BlockSubmit, MinerDataBuilder},
+		BlockSubmitParams, MinerData, MinerDataParams,
 	},
-	primitives::core::{opaque::Block, AccountId, Difficulty, Hash},
+	primitives::core::{opaque::Block, AccountId, Bytes, Difficulty, Hash, H256},
 };
 use jsonrpsee::{core::async_trait, proc_macros::rpc};
-use substrate::{
-	codec::Decode,
-	primitives::core::{Bytes, H256},
-};
+use substrate::codec::Decode;
 
 #[rpc(client, server)]
 pub trait MinerApi {
