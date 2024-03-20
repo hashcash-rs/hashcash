@@ -34,5 +34,5 @@ sp-consensus-pow = { workspace = true, features = ["std"] }
 sp-runtime = { workspace = true, features = ["std"] }
 
 hashcash-client-api.workspace = true
-hashcash-client-consensus.workspace = true
+hashcash-client-randomx.workspace = true
 hashcash-primitives-core = { workspace = true, features = ["std"] }

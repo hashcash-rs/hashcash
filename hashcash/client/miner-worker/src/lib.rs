@@ -4,12 +4,9 @@
 mod preludes;
 use preludes::*;
 
-use hashcash::{
-	client::{
-		api::MiningWorkerBackend,
-		consensus::{self, randomx},
-	},
-	randomx::{RandomXFlags, RandomXVm},
+use hashcash::client::{
+	api::{consensus, MiningWorkerBackend},
+	randomx::{self, RandomXFlags, RandomXVm},
 };
 use log::*;
 use rand::{thread_rng, Rng};

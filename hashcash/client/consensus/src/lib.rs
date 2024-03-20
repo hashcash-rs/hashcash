@@ -4,8 +4,5 @@
 mod preludes;
 
 mod algorithm;
-mod common;
-pub mod randomx;
 
-pub use algorithm::*;
-pub use common::*;
+pub use algorithm::RandomXAlgorithm;

@@ -27,7 +27,6 @@ sp-consensus-pow = { workspace = true, features = ["std"] }
 sp-runtime.workspace = true
 
 hashcash-client-api.workspace = true
-hashcash-client-consensus.workspace = true
 hashcash-primitives-core = { workspace = true, features = ["std"] }
 
 p2pool-client-consensus.workspace = true

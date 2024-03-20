@@ -5,8 +5,8 @@ use crate::preludes::*;
 
 use hashcash::{
 	client::{
-		api::MinerData,
-		consensus::{self, randomx},
+		api::{consensus, MinerData},
+		randomx,
 	},
 	primitives::core::AccountId,
 };

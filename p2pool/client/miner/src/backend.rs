@@ -4,9 +4,8 @@
 use crate::preludes::*;
 
 use hashcash::{
-	client::{
-		api::{self, BlockSubmitParams, MinerData, MiningHandle, MiningMetadata, Seal, Version},
-		consensus,
+	client::api::{
+		self, consensus, BlockSubmitParams, MinerData, MiningHandle, MiningMetadata, Seal, Version,
 	},
 	primitives::core::{opaque::Block, AccountId, Difficulty, Hash},
 };

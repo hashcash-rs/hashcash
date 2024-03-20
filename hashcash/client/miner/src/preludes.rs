@@ -4,7 +4,6 @@
 pub mod hashcash {
 	pub mod client {
 		pub use hashcash_client_api as api;
-		pub use hashcash_client_consensus as consensus;
 	}
 	pub use hashcash_primitives as primitives;
 }

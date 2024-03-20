@@ -9,6 +9,7 @@ pub mod hashcash {
 
 pub mod substrate {
 	pub mod client {
+		pub use sc_client_api as api;
 		pub mod consensus {
 			pub use sc_consensus::*;
 			pub use sc_consensus_pow as pow;

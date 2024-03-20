@@ -1,11 +1,12 @@
 // Copyright (c) Ryuichi Sakamoto
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-pub const LOG_TARGET: &str = "consensus";
-
 pub mod hashcash {
+	pub mod client {
+		pub use hashcash_client_api as api;
+		pub use hashcash_client_randomx as randomx;
+	}
 	pub use hashcash_primitives as primitives;
-	pub use hashcash_randomx as randomx;
 }
 
 pub mod substrate {
@@ -26,5 +27,5 @@ pub mod substrate {
 
 pub use hashcash::primitives::core::{
 	opaque::{Block, BlockId},
-	BlockNumber, Difficulty, Hash, Nonce, U256,
+	Difficulty, Hash,
 };

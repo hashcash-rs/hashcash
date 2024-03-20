@@ -5,8 +5,8 @@ use crate::{preludes::*, P2POOL_AUX_PREFIX};
 
 use hashcash::{
 	client::{
-		api::MinerData,
-		consensus::{randomx, Seal},
+		api::{consensus::Seal, MinerData},
+		randomx,
 	},
 	primitives::core::AccountId,
 };

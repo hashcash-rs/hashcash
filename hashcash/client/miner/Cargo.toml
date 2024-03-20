@@ -16,7 +16,6 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 async-trait.workspace = true
 hashcash-client-api.workspace = true
-hashcash-client-consensus.workspace = true
 hashcash-client-miner-worker.workspace = true
 hashcash-primitives = { workspace = true, features = ["std"] }
 log.workspace = true
