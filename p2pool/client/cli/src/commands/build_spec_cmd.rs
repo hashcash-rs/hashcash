@@ -1,5 +1,5 @@
-// Copyright (c) Hisaishi Joe
-// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) Parity Technologies (UK) Ltd.
+// SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 use crate::{config::P2PoolConfigurationValues, preludes::*};
 
