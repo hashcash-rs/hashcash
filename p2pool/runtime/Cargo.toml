@@ -28,7 +28,6 @@ pallet-wtema.workspace = true
 frame-benchmarking = { workspace = true, optional = true }
 frame-system-benchmarking = { workspace = true, optional = true }
 frame-try-runtime = { workspace = true, optional = true }
-sp-storage = { workspace = true, optional = true }
 
 sp-api.workspace = true
 sp-block-builder.workspace = true
@@ -39,7 +38,8 @@ sp-inherents.workspace = true
 sp-offchain.workspace = true
 sp-runtime.workspace = true
 sp-session.workspace = true
-sp-std = { workspace = true, optional = true }
+sp-std.workspace = true
+sp-storage = { workspace = true, optional = true }
 sp-transaction-pool.workspace = true
 sp-version.workspace = true
 
@@ -51,10 +51,13 @@ substrate-wasm-builder.workspace = true
 [features]
 default = ["std"]
 std = [
+  "frame-benchmarking?/std",
   "frame-executive/std",
   "frame-support/std",
   "frame-system/std",
+  "frame-system-benchmarking?/std",
   "frame-system-rpc-runtime-api/std",
+  "frame-try-runtime?/std",
   "hashcash-primitives-core/std",
   "pallet-timestamp/std",
   "pallet-wtema/std",
