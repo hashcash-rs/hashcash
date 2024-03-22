@@ -15,6 +15,7 @@ pub mod hashcash {
 pub mod p2pool {
 	pub use p2pool_runtime as runtime;
 	pub mod client {
+		pub use p2pool_client_cli as cli;
 		pub use p2pool_client_consensus as consensus;
 		pub use p2pool_client_miner as miner;
 	}

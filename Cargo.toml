@@ -20,6 +20,7 @@ members = [
   "hashcash/primitives/core",
   "hashcash/randomx",
   "hashcash/runtime",
+  "p2pool/client/cli",
   "p2pool/client/consensus",
   "p2pool/client/miner",
   "p2pool/node",
@@ -66,9 +67,11 @@ futures = "0.3.30"
 futures-timer = "3.0.1"
 jsonrpsee = "0.22.2"
 log = "0.4.20"
+names = "0.14.0"
 parity-scale-codec = { version = "3.6.9", default-features = false }
 parking_lot = "0.12.1"
 rand = "0.8.5"
+regex = "1.10.3"
 scale-info = { version = "2.10.0", default-features = false }
 schnellru = "0.2.1"
 serde = "1.0.196"
@@ -146,6 +149,7 @@ hashcash-randomx = { path = "hashcash/randomx" }
 hashcash-runtime = { path = "hashcash/runtime", default-features = false }
 pallet-coinbase = { path = "hashcash/pallets/coinbase", default-features = false }
 pallet-wtema = { path = "hashcash/pallets/wtema", default-features = false }
+p2pool-client-cli = { path = "p2pool/client/cli" }
 p2pool-client-consensus = { path = "p2pool/client/consensus" }
 p2pool-client-miner = { path = "p2pool/client/miner" }
 p2pool-runtime = { path = "p2pool/runtime", default-features = false }
