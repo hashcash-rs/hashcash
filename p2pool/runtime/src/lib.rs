@@ -33,7 +33,7 @@ use substrate::{
 		runtime::{
 			traits::Block as BlockT,
 			transaction_validity::{TransactionSource, TransactionValidity},
-			ApplyExtrinsicResult,
+			ApplyExtrinsicResult, ExtrinsicInclusionMode,
 		},
 		version::RuntimeVersion,
 	},
@@ -57,7 +57,7 @@ impl_runtime_apis! {
 			Executive::execute_block(block);
 		}
 
-		fn initialize_block(header: &<Block as BlockT>::Header) {
+		fn initialize_block(header: &<Block as BlockT>::Header) -> ExtrinsicInclusionMode {
 			Executive::initialize_block(header)
 		}
 	}
