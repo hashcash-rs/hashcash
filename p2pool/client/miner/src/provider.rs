@@ -98,9 +98,9 @@ where
 		let mut count = NumberFor::<B>::zero();
 		while current.hash() != self.genesis_hash && count < self.window_size {
 			let author = self
-				.author_of(current.clone())?
+				.author_of(&current)?
 				.ok_or(MinerDataError::Other("Author does not exist".to_string()))?;
-			let difficulty = self.difficulty_of(current.clone())?;
+			let difficulty = self.difficulty_of(&current)?;
 			match shares.get_mut(&author) {
 				Some(value) => {
 					*value = value.saturating_add(difficulty);
@@ -110,7 +110,7 @@ where
 				},
 			};
 
-			current = self.parent_of(current)?;
+			current = self.parent_of(&current)?;
 			count = count.saturating_plus_one();
 		}
 
@@ -129,7 +129,7 @@ where
 
 	fn parent_of(
 		&self,
-		header: <B as Block>::Header,
+		header: &<B as Block>::Header,
 	) -> Result<<B as Block>::Header, MinerDataError> {
 		let parent_hash = header.parent_hash();
 		let parent =
@@ -139,7 +139,10 @@ where
 		Ok(parent)
 	}
 
-	fn author_of(&self, header: <B as Block>::Header) -> Result<Option<AccountId>, MinerDataError> {
+	fn author_of(
+		&self,
+		header: &<B as Block>::Header,
+	) -> Result<Option<AccountId>, MinerDataError> {
 		let mut author: Option<AccountId> = None;
 		for log in header.digest().logs() {
 			if let DigestItem::PreRuntime(POW_ENGINE_ID, v) = log {
@@ -154,7 +157,7 @@ where
 		Ok(author)
 	}
 
-	fn difficulty_of(&self, header: <B as Block>::Header) -> Result<Difficulty, MinerDataError> {
+	fn difficulty_of(&self, header: &<B as Block>::Header) -> Result<Difficulty, MinerDataError> {
 		let key: Vec<u8> =
 			P2POOL_AUX_PREFIX.iter().chain(header.hash().as_ref()).copied().collect();
 
