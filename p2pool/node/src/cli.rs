@@ -4,8 +4,16 @@
 use crate::{chain_spec, preludes::*};
 
 use hashcash::primitives::core::AccountId;
+use p2pool::client::cli::{BuildSpecCmd, RunCmd};
 use substrate::{
-	client::cli::{self, commands::*, CliConfiguration, Error, SubstrateCli},
+	client::cli::{
+		self,
+		commands::{
+			ChainInfoCmd, CheckBlockCmd, ExportBlocksCmd, ExportStateCmd, ImportBlocksCmd,
+			KeySubcommand, PurgeChainCmd, RevertCmd,
+		},
+		CliConfiguration, Error, SubstrateCli,
+	},
 	frames::benchmarking::cli::BenchmarkCmd,
 	primitives::{core::crypto::Ss58Codec, keyring::AccountKeyring},
 };

@@ -52,6 +52,7 @@ substrate-frame-rpc-system.workspace = true
 
 hashcash-client-miner-worker.workspace = true
 hashcash-primitives-core = { workspace = true, features = ["std"] }
+p2pool-client-cli.workspace = true
 p2pool-client-consensus.workspace = true
 p2pool-client-miner.workspace = true
 p2pool-runtime = { workspace = true, features = ["std"] }
