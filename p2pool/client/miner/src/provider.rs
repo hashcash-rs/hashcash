@@ -4,13 +4,11 @@
 use crate::{error::*, preludes::*};
 
 use hashcash::{
-	client::api::MinerData,
+	client::{
+		api::MinerData,
+		utils::rpc::{rpc_params, RpcClient},
+	},
 	primitives::core::{AccountId, Difficulty},
-};
-use jsonrpsee::{
-	core::{client::ClientT, params::ArrayParams},
-	http_client::{HttpClient, HttpClientBuilder},
-	rpc_params,
 };
 use p2pool::client::consensus::P2POOL_AUX_PREFIX;
 use std::{collections::BTreeMap, sync::Arc};
@@ -31,7 +29,7 @@ const LOG_TARGET: &str = "miner-data";
 
 #[derive(Clone)]
 pub struct MinerDataProvider<B: Block, C> {
-	rpc_client: HttpClient,
+	rpc_client: RpcClient,
 	client: Arc<C>,
 	author: AccountId,
 	genesis_hash: B::Hash,
@@ -44,21 +42,13 @@ where
 	C: AuxStore + BlockchainEvents<B> + HeaderBackend<B> + 'static,
 {
 	pub fn new(
-		mainchain_rpc: String,
+		rpc_client: RpcClient,
 		client: Arc<C>,
 		author: AccountId,
 		genesis_hash: B::Hash,
 		window_size: NumberFor<B>,
 	) -> Result<Self, MinerDataError> {
-		Ok(Self {
-			rpc_client: HttpClientBuilder::default()
-				.build(mainchain_rpc)
-				.map_err(MinerDataError::HttpClient)?,
-			client,
-			author,
-			genesis_hash,
-			window_size,
-		})
+		Ok(Self { rpc_client, client, author, genesis_hash, window_size })
 	}
 
 	pub async fn miner_data(&self, best_hash: &B::Hash) -> Option<MinerData> {
@@ -74,12 +64,9 @@ where
 	async fn miner_data_inner(&self, best_hash: &B::Hash) -> Result<MinerData, MinerDataError> {
 		let shares = self.get_shares(best_hash).await?;
 		self.rpc_client
-			.request::<MinerData, ArrayParams>(
-				"miner_getMinerData",
-				rpc_params!(self.author.clone(), shares),
-			)
+			.request("miner_getMinerData", rpc_params![self.author.clone(), shares])
 			.await
-			.map_err(MinerDataError::HttpClient)
+			.map_err(MinerDataError::RpcClient)
 	}
 
 	async fn get_shares(

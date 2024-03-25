@@ -13,6 +13,7 @@ members = [
   "hashcash/client/miner-worker",
   "hashcash/client/randomx",
   "hashcash/client/rpc",
+  "hashcash/client/utils",
   "hashcash/node",
   "hashcash/pallets/coinbase",
   "hashcash/pallets/wtema",
@@ -143,6 +144,7 @@ hashcash-client-miner = { path = "hashcash/client/miner" }
 hashcash-client-miner-worker = { path = "hashcash/client/miner-worker" }
 hashcash-client-randomx = { path = "hashcash/client/randomx" }
 hashcash-client-rpc = { path = "hashcash/client/rpc" }
+hashcash-client-utils = { path = "hashcash/client/utils", default-features = false }
 hashcash-primitives = { path = "hashcash/primitives", default-features = false }
 hashcash-primitives-core = { path = "hashcash/primitives/core", default-features = false }
 hashcash-randomx = { path = "hashcash/randomx" }

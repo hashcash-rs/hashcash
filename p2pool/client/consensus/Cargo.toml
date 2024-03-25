@@ -16,7 +16,6 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 async-trait.workspace = true
 futures.workspace = true
-jsonrpsee = { workspace = true, features = ["http-client"] }
 log.workspace = true
 parity-scale-codec = { workspace = true, features = ["std"] }
 parking_lot.workspace = true
@@ -34,4 +33,5 @@ sp-runtime = { workspace = true, features = ["std"] }
 
 hashcash-client-api.workspace = true
 hashcash-client-randomx.workspace = true
+hashcash-client-utils = { workspace = true, features = ["rpc"] }
 hashcash-primitives-core = { workspace = true, features = ["std"] }

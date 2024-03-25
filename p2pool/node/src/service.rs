@@ -5,7 +5,7 @@ use crate::{cli::CliOptions, preludes::*};
 
 use futures::FutureExt;
 use hashcash::{
-	client::miner::worker::MiningWorker,
+	client::{miner::worker::MiningWorker, utils::rpc},
 	primitives::core::{opaque::Block, AccountId},
 };
 use p2pool::{
@@ -237,12 +237,16 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 		telemetry: telemetry.as_mut(),
 	})?;
 
+	let rpc_client =
+		futures::executor::block_on(rpc::rpc_client_from_url(options.mainchain_rpc.clone()))
+			.map_err(|e| Error::Other(e.to_string()))?;
+
 	if role.is_authority() {
 		let author = options.author_id.clone().unwrap();
 		let window_size = options.window_size;
 		let genesis_hash = client.chain_info().genesis_hash;
 		let provider = MinerDataProvider::new(
-			options.mainchain_rpc.clone(),
+			rpc_client.clone(),
 			client.clone(),
 			author.clone(),
 			genesis_hash,
@@ -250,8 +254,7 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 		)
 		.map_err(|e| Error::Other(e.to_string()))?;
 
-		let worker = BlockSubmitWorker::new(options.mainchain_rpc)
-			.map_err(|e| Error::Other(e.to_string()))?;
+		let worker = BlockSubmitWorker::new(rpc_client).map_err(|e| Error::Other(e.to_string()))?;
 		let submit = worker.tx.clone();
 		task_manager.spawn_handle().spawn("block-submit", None, worker.run());
 

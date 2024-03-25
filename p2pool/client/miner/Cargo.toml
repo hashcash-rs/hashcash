@@ -15,7 +15,6 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 parity-scale-codec.workspace = true
-jsonrpsee = { workspace = true, features = ["http-client"] }
 log.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
@@ -27,6 +26,7 @@ sp-consensus-pow = { workspace = true, features = ["std"] }
 sp-runtime.workspace = true
 
 hashcash-client-api.workspace = true
+hashcash-client-utils = { workspace = true, features = ["rpc"] }
 hashcash-primitives-core = { workspace = true, features = ["std"] }
 
 p2pool-client-consensus.workspace = true

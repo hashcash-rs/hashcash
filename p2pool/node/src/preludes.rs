@@ -6,6 +6,7 @@ pub mod hashcash {
 		pub mod miner {
 			pub use hashcash_client_miner_worker as worker;
 		}
+		pub use hashcash_client_utils as utils;
 	}
 	pub mod primitives {
 		pub use hashcash_primitives_core as core;

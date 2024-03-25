@@ -24,7 +24,7 @@ pub struct CliOptions {
 	#[arg(long, value_name = "COUNT")]
 	pub threads: Option<usize>,
 	/// Specify the mainchain rpc endpoint for p2pool mining.
-	#[arg(long, value_name = "ADDR", default_value = "http://localhost:9944")]
+	#[arg(long, value_name = "ADDR", default_value = "ws://localhost:9944")]
 	pub mainchain_rpc: String,
 	/// Account for block mining rewards.
 	#[arg(long)]

@@ -10,7 +10,7 @@ pub enum MinerDataError {
 	#[error(transparent)]
 	Codec(codec::Error),
 	#[error(transparent)]
-	HttpClient(jsonrpsee::core::client::Error),
+	RpcClient(hashcash::client::utils::rpc::Error),
 	#[error(transparent)]
 	Blockchain(substrate::primitives::blockchain::Error),
 	#[error("{0}")]
