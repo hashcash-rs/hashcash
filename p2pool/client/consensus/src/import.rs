@@ -1,7 +1,7 @@
 // Copyright (c) Hisaishi Joe
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::{preludes::*, P2POOL_AUX_PREFIX};
+use crate::preludes::*;
 
 use hashcash::{
 	client::{
@@ -30,6 +30,7 @@ use substrate::{
 };
 
 pub const MAINCHAIN_AUX_PREFIX: [u8; 4] = *b"MCH:";
+pub const P2POOL_AUX_PREFIX: [u8; 4] = *b"P2P:";
 
 pub struct P2PoolBlockImport<I, C> {
 	inner: I,
