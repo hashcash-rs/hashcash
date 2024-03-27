@@ -11,7 +11,8 @@ use hashcash::{
 use p2pool::{
 	client::{
 		consensus::{
-			BlockSubmitWorker, Mainchain, MainchainReader, P2PoolAlgorithm, P2PoolBlockImport,
+			BlockAnnounceValidator, BlockSubmitWorker, Mainchain, MainchainReader, P2PoolAlgorithm,
+			P2PoolBlockImport,
 		},
 		miner::{MinerDataProvider, MiningWorkerBackend},
 	},
@@ -175,6 +176,9 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 		other: (block_import, mut telemetry),
 	} = new_partial(&config)?;
 
+	let mainchain = Arc::new(RwLock::new(Mainchain::new()));
+	let block_announce_validator = BlockAnnounceValidator::new(mainchain.clone());
+
 	let net_config = FullNetworkConfiguration::new(&config.network);
 
 	let (network, system_rpc_tx, tx_handler_controller, network_starter, sync_service) =
@@ -185,7 +189,9 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 			transaction_pool: transaction_pool.clone(),
 			spawn_handle: task_manager.spawn_handle(),
 			import_queue,
-			block_announce_validator_builder: None,
+			block_announce_validator_builder: Some(Box::new(|_| {
+				Box::new(block_announce_validator)
+			})),
 			warp_sync_params: None,
 			block_relay: None,
 		})?;
@@ -244,7 +250,6 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 		futures::executor::block_on(rpc::rpc_client_from_url(options.mainchain_rpc.clone()))
 			.map_err(|e| Error::Other(e.to_string()))?;
 
-	let mainchain = Arc::new(RwLock::new(Mainchain::new()));
 	let mainchain_reader = MainchainReader::new(rpc_client.clone(), mainchain);
 	task_manager
 		.spawn_essential_handle()
