@@ -4,11 +4,8 @@
 use crate::{preludes::*, P2POOL_AUX_PREFIX};
 
 use hashcash::{
-	client::{
-		api::{consensus::Seal, MinerData},
-		randomx,
-	},
-	primitives::core::{AccountId, H256, U256},
+	client::{api::consensus::Seal, randomx},
+	primitives::core::{H256, U256},
 };
 use std::sync::Arc;
 use substrate::{
@@ -71,7 +68,7 @@ where
 	) -> Result<ImportResult, Self::Error> {
 		let inner_seal = fetch_seal::<B>(block.post_digests.last(), block.header.hash())?;
 		let miner_data = find_pre_digest::<B>(&block.header)?
-			.map(|v| <(AccountId, MinerData)>::decode(&mut &v[..]))
+			.map(|v| <PreDigest>::decode(&mut &v[..]))
 			.ok_or(ConsensusError::ClientImport(
 				"Unable to import block: pre-digest not set".to_string(),
 			))?

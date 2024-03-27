@@ -3,13 +3,7 @@
 
 use crate::preludes::*;
 
-use hashcash::{
-	client::{
-		api::{consensus, MinerData},
-		randomx,
-	},
-	primitives::core::AccountId,
-};
+use hashcash::client::{api::consensus, randomx};
 use std::sync::Arc;
 use substrate::{
 	client::{
@@ -63,7 +57,7 @@ where
 		difficulty: Difficulty,
 	) -> Result<bool, Error<Block>> {
 		let miner_data = pre_digest
-			.map(|v| <(AccountId, MinerData)>::decode(&mut &v[..]))
+			.map(|v| <PreDigest>::decode(&mut &v[..]))
 			.ok_or(Error::Other("Unable to verify: pre-digest not set".to_string()))?
 			.map_err(|e| Error::Other(e.to_string()))?
 			.1;

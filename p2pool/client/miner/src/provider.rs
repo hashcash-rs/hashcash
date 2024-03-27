@@ -10,7 +10,7 @@ use hashcash::{
 	},
 	primitives::core::{AccountId, Difficulty},
 };
-use p2pool::client::consensus::P2POOL_AUX_PREFIX;
+use p2pool::client::consensus::{PreDigest, P2POOL_AUX_PREFIX};
 use std::{collections::BTreeMap, sync::Arc};
 use substrate::{
 	client::api::{backend::AuxStore, BlockchainEvents},
@@ -133,9 +133,7 @@ where
 				if author.is_some() {
 					return Err(MinerDataError::Other("Multiple authors exist".to_string()));
 				}
-				author = Some(
-					<(AccountId, MinerData)>::decode(&mut &v[..]).map_err(MinerDataError::Codec)?.0,
-				);
+				author = Some(<PreDigest>::decode(&mut &v[..]).map_err(MinerDataError::Codec)?.0);
 			}
 		}
 		Ok(author)

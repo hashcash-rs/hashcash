@@ -7,8 +7,9 @@ use hashcash::{
 	client::api::{
 		self, consensus, BlockSubmitParams, MinerData, MiningHandle, MiningMetadata, Seal, Version,
 	},
-	primitives::core::{opaque::Block, AccountId, Difficulty, Hash},
+	primitives::core::{opaque::Block, Difficulty, Hash},
 };
+use p2pool::client::consensus::PreDigest;
 use std::sync::Arc;
 use substrate::{
 	client::{api::HeaderBackend, utils::mpsc::TracingUnboundedSender},
@@ -91,11 +92,7 @@ where
 		self.metadata = self.handle.metadata();
 
 		if let Some(ref metadata) = self.metadata {
-			match metadata
-				.pre_runtime
-				.as_ref()
-				.map(|v| <(AccountId, MinerData)>::decode(&mut &v[..]))
-			{
+			match metadata.pre_runtime.as_ref().map(|v| <PreDigest>::decode(&mut &v[..])) {
 				Some(Ok((_, miner_data))) => {
 					self.miner_data = Some(miner_data);
 					true

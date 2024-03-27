@@ -10,4 +10,6 @@ pub use algorithm::*;
 pub use import::*;
 pub use submit::*;
 
+pub use preludes::PreDigest;
+
 pub const P2POOL_AUX_PREFIX: [u8; 4] = *b"P2P:";

@@ -38,3 +38,7 @@ pub use hashcash::primitives::core::{
 	opaque::{Block, BlockId},
 	Difficulty, Hash,
 };
+
+use hashcash::{client::api::MinerData, primitives::core::AccountId};
+
+pub type PreDigest = (AccountId, MinerData);
