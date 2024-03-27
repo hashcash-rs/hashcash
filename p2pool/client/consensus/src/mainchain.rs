@@ -3,9 +3,14 @@
 
 use crate::preludes::*;
 
+use futures::FutureExt;
 use hashcash::{
-	client::utils::rpc::{
-		reconnecting_rpc_client::FibonacciBackoff, rpc_params, Error, RpcClient, RpcSubscription,
+	client::{
+		api::consensus::{seed_height, SEEDHASH_EPOCH_BLOCKS},
+		utils::rpc::{
+			reconnecting_rpc_client::FibonacciBackoff, rpc_params, Error, RpcClient,
+			RpcSubscription,
+		},
 	},
 	primitives::core::{opaque::Header, BlockNumber},
 };
@@ -15,7 +20,7 @@ use std::{
 	collections::{BTreeMap, HashMap},
 	sync::Arc,
 };
-use substrate::primitives::blockchain::BlockStatus;
+use substrate::primitives::{blockchain::BlockStatus, core::traits::SpawnNamed};
 use tokio::time::Duration;
 
 const BLOCK_HEADERS_REQUIRED: BlockNumber = 720;
@@ -58,8 +63,13 @@ impl Mainchain {
 			None => self.by_height.last_key_value().map(|(_, h)| h.hash()),
 		}
 	}
+
+	pub fn seed_hash(&self, number: BlockNumber) -> Option<Hash> {
+		self.hash(Some(seed_height(number)))
+	}
 }
 
+#[derive(Clone)]
 pub struct MainchainReader {
 	rpc_client: RpcClient,
 	chain: Arc<RwLock<Mainchain>>,
@@ -81,8 +91,14 @@ macro_rules! retry {
 }
 
 impl MainchainReader {
-	pub fn new(rpc_client: RpcClient, chain: Arc<RwLock<Mainchain>>) -> Self {
-		MainchainReader { rpc_client, chain }
+	pub fn new(
+		rpc_client: RpcClient,
+		chain: Arc<RwLock<Mainchain>>,
+		spawner: impl SpawnNamed,
+	) -> Self where {
+		let reader = Self { rpc_client, chain };
+		spawner.spawn("mainchain-reader", None, reader.clone().init().boxed());
+		reader
 	}
 
 	pub async fn run(mut self) {
@@ -95,13 +111,42 @@ impl MainchainReader {
 		}
 	}
 
+	async fn init(mut self) {
+		let best_header =
+			retry!(self.chain_get_header(None)).expect("Best header must be found; qed");
+		let seed_height = seed_height(best_header.number);
+		let prev_seed_height = seed_height.saturating_sub(SEEDHASH_EPOCH_BLOCKS);
+		if let Some(header) = self.fetch_header(Some(seed_height)).await {
+			self.import_header(header);
+		}
+		if prev_seed_height != seed_height {
+			if let Some(header) = self.fetch_header(Some(prev_seed_height)).await {
+				self.import_header(header);
+			}
+		}
+		let begin_height = best_header.number.saturating_sub(BLOCK_HEADERS_REQUIRED - 1);
+		for height in (begin_height..best_header.number).rev() {
+			if let Some(header) = self.fetch_header(Some(height)).await {
+				self.import_header(header);
+			}
+		}
+		debug!(target: LOG_TARGET, "Mainchain sync initialized.");
+	}
+
+	async fn fetch_header(&self, number: Option<BlockNumber>) -> Option<Header> {
+		let hash = retry!(self.chain_get_block_hash(number))?;
+		retry!(self.chain_get_header(Some(hash)))
+	}
+
 	fn import_header(&mut self, header: Header) {
 		let header = Arc::new(header);
 		let (height, hash) = (header.number, header.hash());
 		{
 			let mut chain = self.chain.write();
 			if let Some(h) = chain.by_height.insert(height, header.clone()) {
-				info!(target: LOG_TARGET, "♻️  Mainchain reorg on #{},{} to #{},{}", height, h.hash(), height, hash);
+				if h.hash() != hash {
+					info!(target: LOG_TARGET, "♻️  Mainchain reorg on #{},{} to #{},{}", height, h.hash(), height, hash);
+				}
 			}
 			chain.by_hash.insert(hash, header);
 
@@ -112,6 +157,19 @@ impl MainchainReader {
 			}
 		}
 		info!(target: LOG_TARGET, "📥 Imported mainchain #{} ({})", height, hash);
+	}
+
+	async fn chain_get_block_hash(
+		&self,
+		number: Option<BlockNumber>,
+	) -> Result<Option<Hash>, Error> {
+		let hash = self.rpc_client.request("chain_getBlockHash", rpc_params![number]).await?;
+		Ok(hash)
+	}
+
+	async fn chain_get_header(&self, hash: Option<Hash>) -> Result<Option<Header>, Error> {
+		let header = self.rpc_client.request("chain_getHeader", rpc_params![hash]).await?;
+		Ok(header)
 	}
 
 	async fn chain_subscribe_new_heads(&self) -> Result<RpcSubscription<Header>, Error> {

@@ -250,7 +250,8 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 		futures::executor::block_on(rpc::rpc_client_from_url(options.mainchain_rpc.clone()))
 			.map_err(|e| Error::Other(e.to_string()))?;
 
-	let mainchain_reader = MainchainReader::new(rpc_client.clone(), mainchain);
+	let mainchain_reader =
+		MainchainReader::new(rpc_client.clone(), mainchain, task_manager.spawn_handle());
 	task_manager
 		.spawn_essential_handle()
 		.spawn("mainchain-reader", None, mainchain_reader.run());

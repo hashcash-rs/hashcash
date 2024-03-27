@@ -30,6 +30,7 @@ pub mod substrate {
 			pub use sp_consensus::*;
 			pub use sp_consensus_pow as pow;
 		}
+		pub use sp_core as core;
 		pub use sp_runtime as runtime;
 	}
 	pub use parity_scale_codec as codec;

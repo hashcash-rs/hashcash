@@ -13,6 +13,9 @@ use substrate::{
 	codec::{Decode, Encode},
 };
 
+pub const SEEDHASH_EPOCH_BLOCKS: BlockNumber = 2048;
+pub const SEEDHASH_EPOCH_LAG: BlockNumber = 64;
+
 #[derive(Debug, Decode, Encode)]
 pub struct Seal {
 	pub nonce: Nonce,
@@ -28,9 +31,6 @@ pub fn check_hash(hash: &Hash, difficulty: Difficulty) -> bool {
 
 /// Returns a block number for retrieving the seed hash.
 pub fn seed_height(height: BlockNumber) -> BlockNumber {
-	const SEEDHASH_EPOCH_BLOCKS: BlockNumber = 2048;
-	const SEEDHASH_EPOCH_LAG: BlockNumber = 64;
-
 	if height <= SEEDHASH_EPOCH_BLOCKS + SEEDHASH_EPOCH_LAG {
 		return 0;
 	}
