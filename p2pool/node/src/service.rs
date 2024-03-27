@@ -10,11 +10,14 @@ use hashcash::{
 };
 use p2pool::{
 	client::{
-		consensus::{BlockSubmitWorker, P2PoolAlgorithm, P2PoolBlockImport},
+		consensus::{
+			BlockSubmitWorker, Mainchain, MainchainReader, P2PoolAlgorithm, P2PoolBlockImport,
+		},
 		miner::{MinerDataProvider, MiningWorkerBackend},
 	},
 	runtime::RuntimeApi,
 };
+use parking_lot::RwLock;
 use std::{sync::Arc, time::Duration};
 use substrate::{
 	client::{
@@ -240,6 +243,12 @@ pub fn new_full(config: Configuration, options: CliOptions) -> Result<TaskManage
 	let rpc_client =
 		futures::executor::block_on(rpc::rpc_client_from_url(options.mainchain_rpc.clone()))
 			.map_err(|e| Error::Other(e.to_string()))?;
+
+	let mainchain = Arc::new(RwLock::new(Mainchain::new()));
+	let mainchain_reader = MainchainReader::new(rpc_client.clone(), mainchain);
+	task_manager
+		.spawn_essential_handle()
+		.spawn("mainchain-reader", None, mainchain_reader.run());
 
 	if role.is_authority() {
 		let author = options.author_id.clone().unwrap();

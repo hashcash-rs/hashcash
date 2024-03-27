@@ -21,12 +21,14 @@ parity-scale-codec = { workspace = true, features = ["std"] }
 parking_lot.workspace = true
 rand.workspace = true
 thiserror.workspace = true
+tokio.workspace = true
 
 sc-client-api.workspace = true
 sc-consensus.workspace = true
 sc-consensus-pow.workspace = true
 sc-utils.workspace = true
 sp-api = { workspace = true, features = ["std"] }
+sp-blockchain.workspace = true
 sp-consensus.workspace = true
 sp-consensus-pow = { workspace = true, features = ["std"] }
 sp-runtime = { workspace = true, features = ["std"] }
